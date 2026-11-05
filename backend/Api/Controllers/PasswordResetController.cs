@@ -17,7 +17,8 @@ public sealed class PasswordResetController(
     IPasswordResetRepository resets,
     IPasswordHasher<User> hasher,
     IEmailSender email,
-    IConfiguration config) : ControllerBase
+    IConfiguration config,
+    ILogger<PasswordResetController> logger) : ControllerBase
 {
     private static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(30);
 
@@ -35,12 +36,20 @@ public sealed class PasswordResetController(
             var baseUrl = config["App:FrontendUrl"] ?? "http://localhost:5173";
             var link = $"{baseUrl.TrimEnd('/')}/reset-password?token={rawToken}";
 
-            await email.SendAsync(
-                user.Email,
-                "Reset your Kanban password",
-                $"Hi {user.FirstName},\n\nUse this link to choose a new password (valid for 30 minutes):\n{link}\n\n" +
-                "If you didn't ask for this, you can ignore this email.",
-                ct);
+            try
+            {
+                await email.SendAsync(
+                    user.Email,
+                    "Reset your Kanban password",
+                    $"Hi {user.FirstName},\n\nUse this link to choose a new password (valid for 30 minutes):\n{link}\n\n" +
+                    "If you didn't ask for this, you can ignore this email.",
+                    ct);
+            }
+            catch (Exception ex)
+            {
+                // Don't let an email outage change the response: a 500 only for real accounts would reveal who is registered.
+                logger.LogError(ex, "Failed to send password reset email to user {UserId}", user.Id);
+            }
         }
 
         // Identical response whether or not the email exists, so this can't be used to find registered emails.

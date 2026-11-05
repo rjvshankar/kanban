@@ -14,7 +14,12 @@ builder.Services.AddSingleton<IDbConnectionFactory, SqlConnectionFactory>();
 builder.Services.AddSingleton<IUserRepository, UserRepository>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<IPasswordResetRepository, PasswordResetRepository>();
-builder.Services.AddSingleton<IEmailSender, LoggingEmailSender>();
+builder.Services.AddOptions<SmtpOptions>()
+    .Bind(builder.Configuration.GetSection(SmtpOptions.Section))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.Host) && !string.IsNullOrWhiteSpace(o.FromAddress),
+        "Smtp:Host and Smtp:FromAddress must be configured.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddControllers();
 

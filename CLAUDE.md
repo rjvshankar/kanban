@@ -12,7 +12,7 @@ Mini Trello-style Kanban board.
 - Connection string lives in dotnet user-secrets (`ConnectionStrings:Default`), not in the repo.
 
 ## Run
-- `docker start kanban-db`
+- `docker start kanban-db kanban-mailpit` (Mailpit: fake SMTP on 1025, inbox UI at http://localhost:8025)
 - `cd backend/Api && dotnet run` (http://localhost:5047)
 - `cd frontend && npm run dev` (http://localhost:5173)
 
