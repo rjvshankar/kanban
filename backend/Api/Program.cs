@@ -10,6 +10,8 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+DatabaseMigrator.Migrate(app.Configuration.GetConnectionString("Default")!);
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
