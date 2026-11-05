@@ -21,7 +21,7 @@ public sealed class SmtpEmailSender(IOptions<SmtpOptions> options) : IEmailSende
             _smtp.Host, _smtp.Port,
             _smtp.UseSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None, ct);
 
-        if (!string.IsNullOrEmpty(_smtp.Username))
+        if (!string.IsNullOrEmpty(_smtp.Username) && !string.IsNullOrEmpty(_smtp.Password))
             await client.AuthenticateAsync(_smtp.Username, _smtp.Password, ct);
 
         await client.SendAsync(message, ct);
