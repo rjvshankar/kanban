@@ -93,7 +93,7 @@ kanban/
 - [x] Project scaffold (API, SQL Server in Docker, React/Vite)
 - [x] DbUp migrations and `Users` table
 - [x] JWT authentication
-- [ ] Front end pages for login and password resets
+- [x] Front end pages for login and password resets
 - [ ] Boards, columns and cards (schema and CRUD API)
 - [ ] Drag-and-drop board UI
 - [ ] Real-time updates across tabs (SignalR)
