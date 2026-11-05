@@ -19,6 +19,12 @@ Mini Trello-style Kanban board.
 ## Planned
 JWT auth, boards/columns/cards CRUD, drag and drop (dnd-kit), real-time updates (SignalR), production deployment.
 
+## Deferred auth upgrades (decided to do later)
+- Rate limit forgot-password per email (currently per IP only, built-in ASP.NET limiter, in-memory).
+- Move rate-limit counters to Redis (or similar) so they survive restarts and work across instances.
+- Rate limit login (not limited yet).
+- Invalidate old login cookies after a password reset (JWTs stay valid up to 60 min). Fix: per-user token version checked on each request.
+
 ## Notes
 - Users table exists (migration 0001).
 - Shell is zsh: single-quote any string containing `!`.

@@ -13,8 +13,11 @@ namespace Api.Controllers;
 public sealed class AuthController(
     IUserRepository users,
     IPasswordHasher<User> hasher,
-    ITokenService tokens) : ControllerBase
+    ITokenService tokens,
+    IWebHostEnvironment env) : ControllerBase
 {
+    public const string CookieName = "kanban_auth";
+
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest req, CancellationToken ct)
     {
@@ -56,12 +59,29 @@ public sealed class AuthController(
             return Unauthorized(new { error = "Invalid email or password." });
 
         var (token, expiresAt) = tokens.CreateAccessToken(user);
-        return Ok(new
+        Response.Cookies.Append(CookieName, token, new CookieOptions
         {
-            accessToken = token,
-            expiresAt,
-            user = new { id = user.Id, email = user.Email, firstName = user.FirstName, lastName = user.LastName }
+            HttpOnly = true,                    // JavaScript can't read it, so XSS can't steal it
+            Secure = !env.IsDevelopment(),      // HTTPS-only outside local dev
+            SameSite = SameSiteMode.Strict,     // browser won't send it on cross-site requests
+            Expires = expiresAt,
+            Path = "/"
         });
+
+        return Ok(new { id = user.Id, email = user.Email, firstName = user.FirstName, lastName = user.LastName });
+    }
+
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete(CookieName, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = !env.IsDevelopment(),
+            SameSite = SameSiteMode.Strict,
+            Path = "/"
+        });
+        return NoContent();
     }
 
     [Authorize]
