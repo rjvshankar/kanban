@@ -29,3 +29,45 @@ Content-Type: application/json
 
 ### Delete a board (owner only, soft delete)
 DELETE {{Api_HostAddress}}/api/boards/1
+
+### Add a column to a board
+POST {{Api_HostAddress}}/api/boards/1/columns
+Content-Type: application/json
+
+{ "name": "To do" }
+
+### Rename a column
+PATCH {{Api_HostAddress}}/api/columns/1
+Content-Type: application/json
+
+{ "name": "Doing" }
+
+### Move a column (afterColumnId null = first)
+POST {{Api_HostAddress}}/api/columns/1/move
+Content-Type: application/json
+
+{ "afterColumnId": null }
+
+### Delete a column (soft; its cards go with it)
+DELETE {{Api_HostAddress}}/api/columns/1
+
+### Add a card
+POST {{Api_HostAddress}}/api/columns/1/cards
+Content-Type: application/json
+
+{ "title": "First card", "description": "Details", "dueDate": "2026-12-01" }
+
+### Edit a card (send all three fields; null clears)
+PATCH {{Api_HostAddress}}/api/cards/1
+Content-Type: application/json
+
+{ "title": "Edited", "description": null, "dueDate": null }
+
+### Move a card (same or other column on this board; afterCardId null = top)
+POST {{Api_HostAddress}}/api/cards/1/move
+Content-Type: application/json
+
+{ "toColumnId": 2, "afterCardId": null }
+
+### Delete a card (soft)
+DELETE {{Api_HostAddress}}/api/cards/1

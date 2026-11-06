@@ -14,6 +14,8 @@ builder.Services.AddSingleton<IDbConnectionFactory, SqlConnectionFactory>();
 builder.Services.AddSingleton<IUserRepository, UserRepository>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<IBoardRepository, BoardRepository>();
+builder.Services.AddSingleton<IColumnRepository, ColumnRepository>();
+builder.Services.AddSingleton<ICardRepository, CardRepository>();
 builder.Services.AddSingleton<IPasswordResetRepository, PasswordResetRepository>();
 builder.Services.AddOptions<SmtpOptions>()
     .Bind(builder.Configuration.GetSection(SmtpOptions.Section))
