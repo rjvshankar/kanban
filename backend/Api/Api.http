@@ -1,6 +1,31 @@
 @Api_HostAddress = http://localhost:5047
 
-GET {{Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Log in (sets the kanban_auth cookie; the REST client keeps it for later requests)
+POST {{Api_HostAddress}}/api/auth/login
+Content-Type: application/json
 
-###
+{ "email": "you@example.com", "password": "your-password" }
+
+### Who am I
+GET {{Api_HostAddress}}/api/auth/me
+
+### List my boards
+GET {{Api_HostAddress}}/api/boards
+
+### Create a board
+POST {{Api_HostAddress}}/api/boards
+Content-Type: application/json
+
+{ "name": "My first board" }
+
+### Get a board with its columns and cards
+GET {{Api_HostAddress}}/api/boards/1
+
+### Rename a board (owner/editor)
+PATCH {{Api_HostAddress}}/api/boards/1
+Content-Type: application/json
+
+{ "name": "Renamed board" }
+
+### Delete a board (owner only, soft delete)
+DELETE {{Api_HostAddress}}/api/boards/1

@@ -28,3 +28,4 @@ JWT auth, boards/columns/cards CRUD, drag and drop (dnd-kit), real-time updates 
 ## Notes
 - Users table exists (migration 0001).
 - Shell is zsh: single-quote any string containing `!`.
+- Respond with brief and sharp points. Do not over explain process unless explicitly asked for. 
