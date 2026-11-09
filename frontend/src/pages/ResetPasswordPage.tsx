@@ -1,17 +1,27 @@
+// Reset-password form, opened from the emailed link (/reset-password?token=...).
+
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { api } from '../api/client'
 import { Field, FormCard, FormError } from './Form'
 
+// Reset-password screen.
 export default function ResetPasswordPage() {
+  // The URL query string.
   const [params] = useSearchParams()
+  // The one-time reset token from the emailed link; null if the link is malformed.
   const token = params.get('token')
+  // Programmatic navigation after resetting.
   const navigate = useNavigate()
 
+  // Form field: the new password.
   const [password, setPassword] = useState('')
+  // Error message to show, or null (e.g. expired link).
   const [error, setError] = useState<string | null>(null)
+  // True while the request is running, to disable the button.
   const [busy, setBusy] = useState(false)
 
+  // Sends the token and new password; on success goes to /login.
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
@@ -25,6 +35,7 @@ export default function ResetPasswordPage() {
     }
   }
 
+  // No token in the URL: nothing to reset, so point to the request page.
   if (!token) {
     return (
       <FormCard title="Reset password">

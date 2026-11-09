@@ -1,19 +1,29 @@
+// Registration form. On success it sends you to /login with a "account created" message.
+
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../auth/auth-context'
 import { Field, FormCard, FormError } from './Form'
 
+// Registration screen.
 export default function RegisterPage() {
+  // Auth action from context.
   const { register } = useAuth()
+  // Programmatic navigation after registering.
   const navigate = useNavigate()
 
+  // All form fields in one object.
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phoneNumber: '', password: '' })
+  // Error message to show, or null.
   const [error, setError] = useState<string | null>(null)
+  // True while the request is running, to disable the button.
   const [busy, setBusy] = useState(false)
 
+  // Returns an onChange handler that updates a single field of the form.
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
 
+  // Submits the form; an empty phone number is sent as undefined.
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)

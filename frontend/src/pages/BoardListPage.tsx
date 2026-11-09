@@ -1,3 +1,5 @@
+// Home page: lists the boards you belong to, with create and delete (owner only).
+
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { api } from '../api/client'
@@ -5,14 +7,22 @@ import type { BoardSummary } from '../api/types'
 import { useAuth } from '../auth/auth-context'
 import { FormError } from './Form'
 
+// Board list screen.
 export default function BoardListPage() {
+  // Current user (for the greeting) and the logout action.
   const { user, logout } = useAuth()
+  // The board list; null until the first load finishes.
   const [boards, setBoards] = useState<BoardSummary[] | null>(null)
+  // Bumping this re-runs the load effect, which is how we refetch.
   const [version, setVersion] = useState(0)
+  // Form field: name of the board to create.
   const [name, setName] = useState('')
+  // Error message to show, or null.
   const [error, setError] = useState<string | null>(null)
 
+  // Loads the board list on mount and whenever version changes.
   useEffect(() => {
+    // Set by cleanup so a late response is ignored after unmount.
     let cancelled = false
     api
       .get<BoardSummary[]>('/boards')
@@ -23,8 +33,10 @@ export default function BoardListPage() {
     }
   }, [version])
 
+  // Triggers a refetch.
   const reload = () => setVersion((v) => v + 1)
 
+  // Creates a board, clears the input and refetches.
   async function onCreate(e: FormEvent) {
     e.preventDefault()
     setError(null)
@@ -37,6 +49,7 @@ export default function BoardListPage() {
     }
   }
 
+  // Asks for confirmation, then soft-deletes the board (the API allows owners only).
   async function onDelete(b: BoardSummary) {
     if (!confirm(`Delete board "${b.name}"?`)) return
     setError(null)
