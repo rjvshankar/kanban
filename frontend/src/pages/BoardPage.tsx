@@ -24,7 +24,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import { arrayMove, SortableContext, horizontalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowLeft, Pencil, Plus } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -34,6 +34,7 @@ import ConfirmDialog from '@/components/ConfirmDialog'
 import NameDialog from '@/components/NameDialog'
 import { ApiError, api } from '../api/client'
 import type { Board, Card, Column } from '../api/types'
+import { useBoardRealtime } from '../realtime/useBoardRealtime'
 import CardDialog, { type CardFields } from './CardDialog'
 import { CardFace } from './SortableCard'
 import SortableColumn from './SortableColumn'
@@ -123,6 +124,26 @@ export default function BoardPage() {
   // Triggers a refetch of the board.
   const reload = () => setVersion((v) => v + 1)
 
+  // True from drag start until the drop has been saved. A refetch clears the local drag copy, so refetches wait while this is set.
+  const dragLockRef = useRef(false)
+  // True if the server announced a change during a drag, so we owe the page a refetch afterwards.
+  const pendingReloadRef = useRef(false)
+
+  // Live updates: when someone else changes this board, refetch it (or queue that until the drag ends).
+  useBoardRealtime(Number(id), () => {
+    if (dragLockRef.current) pendingReloadRef.current = true
+    else reload()
+  })
+
+  // Releases the drag lock and runs any refetch that was queued while dragging.
+  function endDragLock() {
+    dragLockRef.current = false
+    if (pendingReloadRef.current) {
+      pendingReloadRef.current = false
+      reload()
+    }
+  }
+
   // Runs a mutation, shows any error as a toast, and refetches the board afterwards (which also clears any draft).
   async function run(fn: () => Promise<unknown>) {
     try {
@@ -155,6 +176,7 @@ export default function BoardPage() {
 
   // Remembers what is being dragged and starts a local copy to modify while dragging.
   function onDragStart(e: DragStartEvent) {
+    dragLockRef.current = true
     setDragging(String(e.active.id))
     setDraft(board!.columns)
   }
@@ -194,8 +216,14 @@ export default function BoardPage() {
     })
   }
 
+  // Handles a drop, then (once the save has finished) lets through any live update that arrived mid-drag.
+  async function onDragEnd(e: DragEndEvent) {
+    await handleDragEnd(e)
+    endDragLock()
+  }
+
   // On drop: work out the final position and save it with one move request; refetch afterwards.
-  function onDragEnd(e: DragEndEvent) {
+  function handleDragEnd(e: DragEndEvent): Promise<void> | void {
     const { active, over } = e
     setDragging(null)
     // Dropped outside any target: discard the draft.
@@ -212,7 +240,7 @@ export default function BoardPage() {
       // Columns in their new order.
       const next = arrayMove(draft, from, to)
       setDraft(next)
-      void run(() => api.post(`/columns/${next[to].id}/move`, { afterColumnId: next[to - 1]?.id ?? null }))
+      return run(() => api.post(`/columns/${next[to].id}/move`, { afterColumnId: next[to - 1]?.id ?? null }))
       return
     }
 
@@ -247,7 +275,7 @@ export default function BoardPage() {
 
     setDraft(next)
     // afterCardId is the card directly above the drop spot (null = top of the column).
-    void run(() => api.post(`/cards/${activeId}/move`, { toColumnId: finalCol.id, afterCardId: finalCol.cards[index - 1]?.id ?? null }))
+    return run(() => api.post(`/cards/${activeId}/move`, { toColumnId: finalCol.id, afterCardId: finalCol.cards[index - 1]?.id ?? null }))
   }
 
   // Saves a new board name (the rename dialog already trimmed it).
@@ -300,6 +328,7 @@ export default function BoardPage() {
           onDragCancel={() => {
             setDragging(null)
             setDraft(null)
+            endDragLock()
           }}
         >
           <div className="flex items-start gap-4 overflow-x-auto pb-4">

@@ -1,19 +1,23 @@
 using Api.Data;
 using Api.Dtos;
+using Api.Services;
 using Microsoft.AspNetCore.Mvc;
 namespace Api.Controllers;
 
-public sealed class CardsController(IBoardRepository boards, IColumnRepository columns, ICardRepository cards)
+public sealed class CardsController(
+    IBoardRepository boards, IColumnRepository columns, ICardRepository cards, IBoardNotifier notifier)
     : BoardScopedController(boards)
 {
     [HttpPost("api/columns/{columnId:int}/cards")]
     public async Task<IActionResult> Create(int columnId, CardRequest req, CancellationToken ct)
     {
-        if (await RequireEditAsync(await columns.GetBoardIdAsync(columnId, ct), ct) is { } denied) return denied;
+        var boardId = await columns.GetBoardIdAsync(columnId, ct);
+        if (await RequireEditAsync(boardId, ct) is { } denied) return denied;
 
         var title = req.Title.Trim();
         var description = Clean(req.Description);
         var (id, position) = await cards.CreateAsync(columnId, title, description, req.DueDate, ct);
+        await notifier.NotifyChangedAsync(boardId!.Value);
         return StatusCode(StatusCodes.Status201Created, new CardResponse(id, title, description, req.DueDate, position));
     }
 
@@ -23,10 +27,10 @@ public sealed class CardsController(IBoardRepository boards, IColumnRepository c
     {
         var ctx = await cards.GetContextAsync(id, ct);
         if (await RequireEditAsync(ctx?.BoardId, ct) is { } denied) return denied;
+        if (!await cards.UpdateAsync(id, req.Title.Trim(), Clean(req.Description), req.DueDate, ct)) return NotFound();
 
-        return await cards.UpdateAsync(id, req.Title.Trim(), Clean(req.Description), req.DueDate, ct)
-            ? NoContent()
-            : NotFound();
+        await notifier.NotifyChangedAsync(ctx!.BoardId);
+        return NoContent();
     }
 
     [HttpPost("api/cards/{id:int}/move")]
@@ -39,9 +43,11 @@ public sealed class CardsController(IBoardRepository boards, IColumnRepository c
         if (await columns.GetBoardIdAsync(req.ToColumnId, ct) != ctx!.BoardId)
             return BadRequest(new { error = "Invalid target column." });
 
-        return await cards.MoveAsync(id, req.ToColumnId, req.AfterCardId, ct)
-            ? NoContent()
-            : BadRequest(new { error = "Invalid position." });
+        if (!await cards.MoveAsync(id, req.ToColumnId, req.AfterCardId, ct))
+            return BadRequest(new { error = "Invalid position." });
+
+        await notifier.NotifyChangedAsync(ctx.BoardId);
+        return NoContent();
     }
 
     [HttpDelete("api/cards/{id:int}")]
@@ -49,7 +55,10 @@ public sealed class CardsController(IBoardRepository boards, IColumnRepository c
     {
         var ctx = await cards.GetContextAsync(id, ct);
         if (await RequireEditAsync(ctx?.BoardId, ct) is { } denied) return denied;
-        return await cards.SoftDeleteAsync(id, ct) ? NoContent() : NotFound();
+        if (!await cards.SoftDeleteAsync(id, ct)) return NotFound();
+
+        await notifier.NotifyChangedAsync(ctx!.BoardId);
+        return NoContent();
     }
 
     private static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();

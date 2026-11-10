@@ -9,7 +9,7 @@ namespace Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/boards")]
-public sealed class BoardsController(IBoardRepository boards) : ControllerBase
+public sealed class BoardsController(IBoardRepository boards, IBoardNotifier notifier) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
@@ -66,7 +66,10 @@ public sealed class BoardsController(IBoardRepository boards) : ControllerBase
         if (role is null) return NotFound();
         if (!BoardRole.CanEdit(role)) return Forbid();
 
-        return await boards.RenameAsync(id, req.Name.Trim(), ct) ? NoContent() : NotFound();
+        if (!await boards.RenameAsync(id, req.Name.Trim(), ct)) return NotFound();
+
+        await notifier.NotifyChangedAsync(id);
+        return NoContent();
     }
 
     [HttpDelete("{id:int}")]
@@ -78,6 +81,10 @@ public sealed class BoardsController(IBoardRepository boards) : ControllerBase
         if (role is null) return NotFound();
         if (role != BoardRole.Owner) return Forbid();
 
-        return await boards.SoftDeleteAsync(id, ct) ? NoContent() : NotFound();
+        if (!await boards.SoftDeleteAsync(id, ct)) return NotFound();
+
+        // Anyone still viewing the board refetches and sees "Board not found".
+        await notifier.NotifyChangedAsync(id);
+        return NoContent();
     }
 }

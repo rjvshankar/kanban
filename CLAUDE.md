@@ -18,7 +18,15 @@ Mini Trello-style Kanban board.
 - `cd frontend && npm run dev` (http://localhost:5173)
 
 ## Planned
-JWT auth, boards/columns/cards CRUD, drag and drop (dnd-kit), real-time updates (SignalR), production deployment.
+Done: JWT auth, boards/columns/cards CRUD, drag and drop (dnd-kit), real-time board updates (SignalR hub `/hubs/board`, "BoardChanged" ping then refetch).
+Next: production deployment.
+
+## Later (decided to do later)
+- Board member management: invite/add members and change roles (BoardMembers table and roles already exist; only the owner row is created today).
+- Live updates on the board list page (new/renamed/deleted boards appear without a refresh).
+- Presence indicators (avatars of who is viewing the board right now).
+- Live cursors (see collaborators' pointers and drags in real time).
+- Granular SignalR events (patch state in place) instead of "BoardChanged, refetch" if refetching ever feels slow.
 
 ## Deferred auth upgrades (decided to do later)
 - Rate limit forgot-password per email (currently per IP only, built-in ASP.NET limiter, in-memory).

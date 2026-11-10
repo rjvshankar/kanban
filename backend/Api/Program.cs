@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using System.Text;
 using Api.Data;
+using Api.Hubs;
 using Api.Models;
 using Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -25,6 +26,8 @@ builder.Services.AddOptions<SmtpOptions>()
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IBoardNotifier, BoardNotifier>();
 
 builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection(JwtOptions.Section))
@@ -111,6 +114,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<BoardHub>("/hubs/board");
 
 app.MapGet("/api/health", async (IDbConnectionFactory db, CancellationToken ct) =>
 {
