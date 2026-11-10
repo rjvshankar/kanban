@@ -15,6 +15,7 @@ builder.Services.AddSingleton<IDbConnectionFactory, SqlConnectionFactory>();
 builder.Services.AddSingleton<IUserRepository, UserRepository>();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<IBoardRepository, BoardRepository>();
+builder.Services.AddSingleton<IMemberRepository, MemberRepository>();
 builder.Services.AddSingleton<IColumnRepository, ColumnRepository>();
 builder.Services.AddSingleton<ICardRepository, CardRepository>();
 builder.Services.AddSingleton<IPasswordResetRepository, PasswordResetRepository>();

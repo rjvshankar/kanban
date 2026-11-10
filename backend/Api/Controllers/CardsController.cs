@@ -12,7 +12,7 @@ public sealed class CardsController(
     public async Task<IActionResult> Create(int columnId, CardRequest req, CancellationToken ct)
     {
         var boardId = await columns.GetBoardIdAsync(columnId, ct);
-        if (await RequireEditAsync(boardId, ct) is { } denied) return denied;
+        if (await RequireEditorAsync(boardId, ct) is { } denied) return denied;
 
         var title = req.Title.Trim();
         var description = Clean(req.Description);
@@ -26,7 +26,7 @@ public sealed class CardsController(
     public async Task<IActionResult> Update(int id, CardRequest req, CancellationToken ct)
     {
         var ctx = await cards.GetContextAsync(id, ct);
-        if (await RequireEditAsync(ctx?.BoardId, ct) is { } denied) return denied;
+        if (await RequireEditorAsync(ctx?.BoardId, ct) is { } denied) return denied;
         if (!await cards.UpdateAsync(id, req.Title.Trim(), Clean(req.Description), req.DueDate, ct)) return NotFound();
 
         await notifier.NotifyChangedAsync(ctx!.BoardId);
@@ -37,7 +37,7 @@ public sealed class CardsController(
     public async Task<IActionResult> Move(int id, MoveCardRequest req, CancellationToken ct)
     {
         var ctx = await cards.GetContextAsync(id, ct);
-        if (await RequireEditAsync(ctx?.BoardId, ct) is { } denied) return denied;
+        if (await RequireEditorAsync(ctx?.BoardId, ct) is { } denied) return denied;
 
         // Target column must be on the same board (same answer whether it's missing or elsewhere).
         if (await columns.GetBoardIdAsync(req.ToColumnId, ct) != ctx!.BoardId)
@@ -54,7 +54,7 @@ public sealed class CardsController(
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var ctx = await cards.GetContextAsync(id, ct);
-        if (await RequireEditAsync(ctx?.BoardId, ct) is { } denied) return denied;
+        if (await RequireEditorAsync(ctx?.BoardId, ct) is { } denied) return denied;
         if (!await cards.SoftDeleteAsync(id, ct)) return NotFound();
 
         await notifier.NotifyChangedAsync(ctx!.BoardId);

@@ -166,7 +166,7 @@ export default function BoardPage() {
   }
   if (!board) return <main className="p-6 text-sm text-muted-foreground">{error ?? 'Loading...'}</main>
 
-  // Owners and editors can change the board; viewers are read-only.
+  // Owners and editors can change cards; viewers are read-only.
   const canEdit = board.role !== 'viewer'
   // Columns to display: the local draft during/just after a drag, otherwise the server's.
   const cols = draft ?? board.columns

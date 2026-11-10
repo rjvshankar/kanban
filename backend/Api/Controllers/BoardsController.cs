@@ -64,7 +64,7 @@ public sealed class BoardsController(IBoardRepository boards, IBoardNotifier not
 
         var role = await boards.GetRoleAsync(userId, id, ct);
         if (role is null) return NotFound();
-        if (!BoardRole.CanEdit(role)) return Forbid();
+        if (!BoardRole.IsOwner(role)) return Forbid();
 
         if (!await boards.RenameAsync(id, req.Name.Trim(), ct)) return NotFound();
 
@@ -79,7 +79,7 @@ public sealed class BoardsController(IBoardRepository boards, IBoardNotifier not
 
         var role = await boards.GetRoleAsync(userId, id, ct);
         if (role is null) return NotFound();
-        if (role != BoardRole.Owner) return Forbid();
+        if (!BoardRole.IsOwner(role)) return Forbid();
 
         if (!await boards.SoftDeleteAsync(id, ct)) return NotFound();
 

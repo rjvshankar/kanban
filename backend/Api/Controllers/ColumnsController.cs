@@ -10,7 +10,7 @@ public sealed class ColumnsController(IBoardRepository boards, IColumnRepository
     [HttpPost("api/boards/{boardId:int}/columns")]
     public async Task<IActionResult> Create(int boardId, ColumnNameRequest req, CancellationToken ct)
     {
-        if (await RequireEditAsync(boardId, ct) is { } denied) return denied;
+        if (await RequireOwnerAsync(boardId, ct) is { } denied) return denied;
 
         var name = req.Name.Trim();
         var (id, position) = await columns.CreateAsync(boardId, name, ct);
@@ -22,7 +22,7 @@ public sealed class ColumnsController(IBoardRepository boards, IColumnRepository
     public async Task<IActionResult> Rename(int id, ColumnNameRequest req, CancellationToken ct)
     {
         var boardId = await columns.GetBoardIdAsync(id, ct);
-        if (await RequireEditAsync(boardId, ct) is { } denied) return denied;
+        if (await RequireOwnerAsync(boardId, ct) is { } denied) return denied;
         if (!await columns.RenameAsync(id, req.Name.Trim(), ct)) return NotFound();
 
         await notifier.NotifyChangedAsync(boardId!.Value);
@@ -33,7 +33,7 @@ public sealed class ColumnsController(IBoardRepository boards, IColumnRepository
     public async Task<IActionResult> Move(int id, MoveColumnRequest req, CancellationToken ct)
     {
         var boardId = await columns.GetBoardIdAsync(id, ct);
-        if (await RequireEditAsync(boardId, ct) is { } denied) return denied;
+        if (await RequireOwnerAsync(boardId, ct) is { } denied) return denied;
 
         if (!await columns.MoveAsync(id, boardId!.Value, req.AfterColumnId, ct))
             return BadRequest(new { error = "Invalid position." });
@@ -46,7 +46,7 @@ public sealed class ColumnsController(IBoardRepository boards, IColumnRepository
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var boardId = await columns.GetBoardIdAsync(id, ct);
-        if (await RequireEditAsync(boardId, ct) is { } denied) return denied;
+        if (await RequireOwnerAsync(boardId, ct) is { } denied) return denied;
         if (!await columns.SoftDeleteAsync(id, ct)) return NotFound();
 
         await notifier.NotifyChangedAsync(boardId!.Value);
