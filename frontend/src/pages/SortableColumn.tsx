@@ -14,7 +14,8 @@ import { SortableCard } from './SortableCard'
 // Inputs: the column data, edit permission, and callbacks into BoardPage.
 interface Props {
   column: Column
-  canEdit: boolean
+  canEdit: boolean // cards: add, drag, edit (owners and editors)
+  canManage: boolean // the column itself: drag, rename, delete (owners)
   onRename: () => void
   onDelete: () => void
   onOpenCard: (card: Card) => void
@@ -22,12 +23,12 @@ interface Props {
 }
 
 // Renders the column; it is both a sortable item (horizontal) and a drop target for cards.
-export default function SortableColumn({ column, canEdit, onRename, onDelete, onOpenCard, onAddCard }: Props) {
+export default function SortableColumn({ column, canEdit, canManage, onRename, onDelete, onOpenCard, onAddCard }: Props) {
   // dnd-kit wiring for the column; the drag listeners are attached to the grip handle only, so dragging a card doesn't drag the column.
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: `col-${column.id}`,
     data: { type: 'column' },
-    disabled: !canEdit,
+    disabled: !canManage,
   })
 
   return (
@@ -38,7 +39,7 @@ export default function SortableColumn({ column, canEdit, onRename, onDelete, on
     >
       <div className="flex items-center justify-between pb-2 pl-1">
         <div className="flex min-w-0 items-center gap-1">
-          {canEdit && (
+          {canManage && (
             <Button
               ref={setActivatorNodeRef}
               {...attributes}
@@ -54,7 +55,7 @@ export default function SortableColumn({ column, canEdit, onRename, onDelete, on
           <h2 className="truncate text-sm font-semibold">{column.name}</h2>
           <span className="text-xs text-muted-foreground">{column.cards.length}</span>
         </div>
-        {canEdit && (
+        {canManage && (
           <div className="flex">
             <Button variant="ghost" size="icon-xs" aria-label="Rename column" onClick={onRename} className="text-muted-foreground"><Pencil /></Button>
             <Button variant="ghost" size="icon-xs" aria-label="Delete column" onClick={onDelete} className="text-muted-foreground"><Trash2 /></Button>

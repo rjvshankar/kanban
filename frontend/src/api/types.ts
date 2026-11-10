@@ -38,3 +38,12 @@ export interface Board {
   createdAt: string
   columns: Column[]
 }
+
+// A person on a board, as listed in the Members dialog (owners only). `role` is empty for search candidates.
+export interface Member {
+  userId: number
+  firstName: string
+  lastName: string
+  email: string
+  role: Role | ''
+}

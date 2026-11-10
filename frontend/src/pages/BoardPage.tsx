@@ -25,7 +25,7 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove, SortableContext, horizontalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { ArrowLeft, Pencil, Plus } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, Users } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,7 @@ import NameDialog from '@/components/NameDialog'
 import { ApiError, api } from '../api/client'
 import type { Board, Card, Column } from '../api/types'
 import { useBoardRealtime } from '../realtime/useBoardRealtime'
+import MembersDialog from './MembersDialog'
 import CardDialog, { type CardFields } from './CardDialog'
 import { CardFace } from './SortableCard'
 import SortableColumn from './SortableColumn'
@@ -42,6 +43,7 @@ import SortableColumn from './SortableColumn'
 // Which modal (rename / delete confirmation) is open, and for what; null when none.
 type DialogState =
   | { kind: 'renameBoard' }
+  | { kind: 'members' }
   | { kind: 'renameColumn'; col: Column }
   | { kind: 'deleteColumn'; col: Column }
   | { kind: 'deleteCard'; card: Card }
@@ -168,6 +170,8 @@ export default function BoardPage() {
 
   // Owners and editors can change cards; viewers are read-only.
   const canEdit = board.role !== 'viewer'
+  // Only owners manage columns, board settings and members.
+  const isOwner = board.role === 'owner'
   // Columns to display: the local draft during/just after a drag, otherwise the server's.
   const cols = draft ?? board.columns
 
@@ -309,12 +313,17 @@ export default function BoardPage() {
           <Link to="/" aria-label="Back to boards"><ArrowLeft /></Link>
         </Button>
         <h1 className="text-lg font-semibold">{board.name}</h1>
-        {canEdit && (
+        {isOwner && (
           <Button variant="ghost" size="icon-sm" aria-label="Rename board" onClick={() => setDialog({ kind: 'renameBoard' })}>
             <Pencil />
           </Button>
         )}
-        <span className="ml-auto text-xs capitalize text-muted-foreground">{board.role}</span>
+        <div className="ml-auto flex items-center gap-3">
+          {isOwner && (
+            <Button variant="outline" size="sm" onClick={() => setDialog({ kind: 'members' })}><Users /> Members</Button>
+          )}
+          <span className="text-xs capitalize text-muted-foreground">{board.role}</span>
+        </div>
       </header>
 
       <main className="p-4">
@@ -339,6 +348,7 @@ export default function BoardPage() {
                   key={col.id}
                   column={col}
                   canEdit={canEdit}
+                  canManage={isOwner}
                   onRename={() => setDialog({ kind: 'renameColumn', col })}
                   onDelete={() => setDialog({ kind: 'deleteColumn', col })}
                   onOpenCard={setEditing}
@@ -347,7 +357,7 @@ export default function BoardPage() {
               ))}
             </SortableContext>
 
-            {canEdit && (
+            {isOwner && (
               <form onSubmit={addColumn} className="flex w-72 shrink-0 gap-2">
                 <Input placeholder="New column" required maxLength={200} value={newColumn} onChange={(e) => setNewColumn(e.target.value)} className="bg-background" />
                 <Button type="submit" variant="outline" size="icon" aria-label="Add column"><Plus /></Button>
@@ -386,6 +396,9 @@ export default function BoardPage() {
       )}
 
       {/* Rename / delete modals, one at a time. */}
+      {dialog?.kind === 'members' && isOwner && (
+        <MembersDialog boardId={board.id} onChanged={reload} onClose={() => setDialog(null)} />
+      )}
       {dialog?.kind === 'renameBoard' && (
         <NameDialog title="Rename board" initial={board.name} onSubmit={saveBoardName} onClose={() => setDialog(null)} />
       )}
