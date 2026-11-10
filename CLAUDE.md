@@ -19,9 +19,11 @@ Mini Trello-style Kanban board.
 
 ## Planned
 Done: JWT auth, boards/columns/cards CRUD, drag and drop (dnd-kit), real-time board updates (SignalR hub `/hubs/board`, "BoardChanged" ping then refetch).
-Next: production deployment.
+Next: board member management (admin/member roles), then archived-board restore, then purge job (see below), then production deployment.
 
 ## Later (decided to do later)
+- Retrieve archived boards (restore soft-deleted boards; admin only; only possible before the 30-day purge).
+- Daily SQL job: permanently purge boards archived >30 days. Moves rows from Boards/Columns/Cards into DeletedBoards/DeletedColumns/DeletedCards, then removes them from live tables. Do before prod deploy.
 - Board member management: invite/add members and change roles (BoardMembers table and roles already exist; only the owner row is created today).
 - Live updates on the board list page (new/renamed/deleted boards appear without a refresh).
 - Presence indicators (avatars of who is viewing the board right now).
