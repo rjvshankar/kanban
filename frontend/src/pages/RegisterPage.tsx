@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '../auth/auth-context'
 import { Field, FormCard, FormError } from './Form'
 
@@ -39,16 +40,18 @@ export default function RegisterPage() {
 
   return (
     <FormCard title="Register">
-      <form onSubmit={onSubmit}>
-        <Field label="First name" required maxLength={100} autoComplete="given-name" value={form.firstName} onChange={set('firstName')} />
-        <Field label="Last name" required maxLength={100} autoComplete="family-name" value={form.lastName} onChange={set('lastName')} />
+      <form onSubmit={onSubmit} className="grid gap-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="First name" required maxLength={100} autoComplete="given-name" value={form.firstName} onChange={set('firstName')} />
+          <Field label="Last name" required maxLength={100} autoComplete="family-name" value={form.lastName} onChange={set('lastName')} />
+        </div>
         <Field label="Email" type="email" required autoComplete="email" value={form.email} onChange={set('email')} />
         <Field label="Phone (optional)" type="tel" maxLength={30} autoComplete="tel" value={form.phoneNumber} onChange={set('phoneNumber')} />
         <Field label="Password (min 8 characters)" type="password" required minLength={8} maxLength={128} autoComplete="new-password" value={form.password} onChange={set('password')} />
         <FormError message={error} />
-        <button type="submit" disabled={busy}>{busy ? 'Creating...' : 'Create account'}</button>
+        <Button type="submit" disabled={busy}>{busy ? 'Creating...' : 'Create account'}</Button>
       </form>
-      <p>Already registered? <Link to="/login">Log in</Link></p>
+      <p className="text-sm text-muted-foreground">Already registered? <Link to="/login" className="text-foreground underline-offset-4 hover:underline">Log in</Link></p>
     </FormCard>
   )
 }

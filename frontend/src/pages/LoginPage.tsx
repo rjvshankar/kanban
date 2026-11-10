@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '../auth/auth-context'
 import { Field, FormCard, FormError } from './Form'
 
@@ -41,16 +42,18 @@ export default function LoginPage() {
 
   return (
     <FormCard title="Log in">
-      {state?.registered && <p>Account created. Please log in.</p>}
-      {state?.reset && <p>Password updated. Please log in.</p>}
-      <form onSubmit={onSubmit}>
+      {state?.registered && <p className="text-sm text-muted-foreground">Account created. Please log in.</p>}
+      {state?.reset && <p className="text-sm text-muted-foreground">Password updated. Please log in.</p>}
+      <form onSubmit={onSubmit} className="grid gap-4">
         <Field label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <Field label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         <FormError message={error} />
-        <button type="submit" disabled={busy}>{busy ? 'Logging in...' : 'Log in'}</button>
+        <Button type="submit" disabled={busy}>{busy ? 'Logging in...' : 'Log in'}</Button>
       </form>
-      <p><Link to="/forgot-password">Forgot password?</Link></p>
-      <p>No account? <Link to="/register">Register</Link></p>
+      <div className="grid gap-1 text-sm text-muted-foreground">
+        <Link to="/forgot-password" className="underline-offset-4 hover:text-foreground hover:underline">Forgot password?</Link>
+        <p>No account? <Link to="/register" className="text-foreground underline-offset-4 hover:underline">Register</Link></p>
+      </div>
     </FormCard>
   )
 }

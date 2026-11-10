@@ -3,16 +3,21 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { CalendarDays } from 'lucide-react'
 import type { Card } from '../api/types'
-import { cardBoxStyle } from './board-styles'
+import { cn } from '@/lib/utils'
 
-// The card's visible content (title + due date); also reused inside the drag preview.
-export function CardBody({ card }: { card: Card }) {
+// The card's visible box (title + due date); also reused as the floating drag preview.
+export function CardFace({ card, className }: { card: Card; className?: string }) {
   return (
-    <>
-      {card.title}
-      {card.dueDate && <div><small>Due {card.dueDate}</small></div>}
-    </>
+    <div className={cn('rounded-lg border bg-card px-3 py-2 text-sm shadow-xs', className)}>
+      <div className="break-words">{card.title}</div>
+      {card.dueDate && (
+        <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+          <CalendarDays className="size-3" /> {card.dueDate}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -30,12 +35,13 @@ export function SortableCard({ card, disabled, onOpen }: { card: Card; disabled:
   return (
     <li
       ref={setNodeRef}
-      style={{ ...cardBoxStyle, transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0.4 : 1, cursor: disabled ? 'pointer' : 'grab' }}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={cn('list-none', isDragging && 'opacity-40')}
       onClick={onOpen}
       {...attributes}
       {...listeners}
     >
-      <CardBody card={card} />
+      <CardFace card={card} className={cn('transition-colors hover:border-ring/60', disabled ? 'cursor-pointer' : 'cursor-grab')} />
     </li>
   )
 }

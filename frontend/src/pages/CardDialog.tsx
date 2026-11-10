@@ -2,6 +2,11 @@
 // Viewers see the fields disabled.
 
 import { useState, type FormEvent } from 'react'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import type { Card } from '../api/types'
 
 // The editable fields, in the shape the API's PATCH /cards/{id} expects.
@@ -16,11 +21,11 @@ interface Props {
   card: Card
   canEdit: boolean
   onSave: (fields: CardFields) => Promise<void>
-  onDelete: () => Promise<void>
+  onDelete: () => void
   onClose: () => void
 }
 
-// Renders the overlay and the edit form; clicking the backdrop closes it.
+// Renders the modal and the edit form; clicking outside or pressing Esc closes it.
 export default function CardDialog({ card, canEdit, onSave, onDelete, onClose }: Props) {
   // Form field: title (starts from the card's current value).
   const [title, setTitle] = useState(card.title)
@@ -40,24 +45,36 @@ export default function CardDialog({ card, canEdit, onSave, onDelete, onClose }:
   }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'grid', placeItems: 'center' }}>
-      <form
-        // Stop clicks inside the form from reaching the backdrop, which would close the dialog.
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={submit}
-        style={{ background: 'var(--bg)', color: 'var(--text-h)', padding: '1rem', width: 'min(440px, 92vw)', borderRadius: 8, display: 'grid', gap: '0.6rem' }}
-      >
-        <label>Title<input required maxLength={200} disabled={!canEdit} value={title} onChange={(e) => setTitle(e.target.value)} style={{ display: 'block', width: '100%', boxSizing: 'border-box' }} /></label>
-        <label>Description<textarea rows={5} maxLength={4000} disabled={!canEdit} value={description} onChange={(e) => setDescription(e.target.value)} style={{ display: 'block', width: '100%', boxSizing: 'border-box' }} /></label>
-        <label>Due date<input type="date" disabled={!canEdit} value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={{ display: 'block' }} /></label>
-        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between' }}>
-          <span>
-            {canEdit && <button type="submit" disabled={busy}>Save</button>}{' '}
-            <button type="button" onClick={onClose}>Close</button>
-          </span>
-          {canEdit && <button type="button" onClick={() => void onDelete()}>Delete card</button>}
-        </div>
-      </form>
-    </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <form onSubmit={submit} className="grid gap-4">
+          <DialogHeader>
+            <DialogTitle>{canEdit ? 'Edit card' : 'Card'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="card-title">Title</Label>
+            <Input id="card-title" required maxLength={200} disabled={!canEdit} value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="card-description">Description</Label>
+            <Textarea id="card-description" rows={5} maxLength={4000} disabled={!canEdit} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="card-due">Due date</Label>
+            <Input id="card-due" type="date" disabled={!canEdit} value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-fit" />
+          </div>
+          <DialogFooter className="sm:justify-between">
+            {canEdit ? (
+              <>
+                <Button type="button" variant="destructive" onClick={onDelete}>Delete</Button>
+                <Button type="submit" disabled={busy}>Save</Button>
+              </>
+            ) : (
+              <Button type="button" variant="outline" onClick={onClose}>Close</Button>
+            )}
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

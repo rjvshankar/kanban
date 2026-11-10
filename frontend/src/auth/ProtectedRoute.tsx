@@ -11,7 +11,7 @@ export function ProtectedRoute() {
   const location = useLocation()
 
   // Wait for the session check so a logged-in user isn't bounced to /login on refresh.
-  if (loading) return <p>Loading...</p>
+  if (loading) return <p className="p-6 text-sm text-muted-foreground">Loading...</p>
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />
   return <Outlet />
 }
@@ -20,7 +20,7 @@ export function ProtectedRoute() {
 export function GuestRoute() {
   const { user, loading } = useAuth()
 
-  if (loading) return <p>Loading...</p>
+  if (loading) return <p className="p-6 text-sm text-muted-foreground">Loading...</p>
   if (user) return <Navigate to="/" replace />
   return <Outlet />
 }

@@ -2,6 +2,7 @@
 // Guest-only pages, the password-reset page and the logged-in pages are grouped by route guard.
 
 import { BrowserRouter, Route, Routes } from 'react-router'
+import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from './auth/AuthProvider'
 import { GuestRoute, ProtectedRoute } from './auth/ProtectedRoute'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -31,6 +32,8 @@ export default function App() {
             <Route path="/boards/:id" element={<BoardPage />} />
           </Route>
         </Routes>
+        {/* Container that shows toast notifications (used for errors on the board pages). */}
+        <Toaster position="bottom-right" />
       </AuthProvider>
     </BrowserRouter>
   )

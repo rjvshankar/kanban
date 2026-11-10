@@ -25,14 +25,26 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove, SortableContext, horizontalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useEffect, useState, type FormEvent } from 'react'
+import { ArrowLeft, Pencil, Plus } from 'lucide-react'
 import { Link, useParams } from 'react-router'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import ConfirmDialog from '@/components/ConfirmDialog'
+import NameDialog from '@/components/NameDialog'
 import { ApiError, api } from '../api/client'
 import type { Board, Card, Column } from '../api/types'
-import { cardBoxStyle, columnBoxStyle } from './board-styles'
 import CardDialog, { type CardFields } from './CardDialog'
-import { FormError } from './Form'
-import { CardBody } from './SortableCard'
+import { CardFace } from './SortableCard'
 import SortableColumn from './SortableColumn'
+
+// Which modal (rename / delete confirmation) is open, and for what; null when none.
+type DialogState =
+  | { kind: 'renameBoard' }
+  | { kind: 'renameColumn'; col: Column }
+  | { kind: 'deleteColumn'; col: Column }
+  | { kind: 'deleteCard'; card: Card }
+  | null
 
 // Builds a column's dnd id from its database id.
 const colKey = (id: number) => `col-${id}`
@@ -70,12 +82,14 @@ export default function BoardPage() {
   const [notFound, setNotFound] = useState(false)
   // Bumping this re-runs the load effect, which is how we refetch.
   const [version, setVersion] = useState(0)
-  // Error message to show above the columns, or null.
+  // Message if the board failed to load, or null. (Errors from edits appear as toasts instead.)
   const [error, setError] = useState<string | null>(null)
   // Form field: name of the column to add.
   const [newColumn, setNewColumn] = useState('')
   // The card open in the edit dialog, or null.
   const [editing, setEditing] = useState<Card | null>(null)
+  // The rename/delete modal currently open, or null.
+  const [dialog, setDialog] = useState<DialogState>(null)
 
   // Input methods that can start a drag: mouse, touch and keyboard.
   const sensors = useSensors(
@@ -109,19 +123,27 @@ export default function BoardPage() {
   // Triggers a refetch of the board.
   const reload = () => setVersion((v) => v + 1)
 
-  // Runs a mutation, shows any error, and refetches the board afterwards (which also clears any draft).
+  // Runs a mutation, shows any error as a toast, and refetches the board afterwards (which also clears any draft).
   async function run(fn: () => Promise<unknown>) {
-    setError(null)
     try {
       await fn()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.')
+      toast.error(e instanceof Error ? e.message : 'Something went wrong.')
     }
     reload()
   }
 
-  if (notFound) return <main style={{ padding: '1rem' }}><p>Board not found.</p><Link to="/">Back to boards</Link></main>
-  if (!board) return <main style={{ padding: '1rem' }}><FormError message={error} /><p>Loading...</p></main>
+  if (notFound) {
+    return (
+      <main className="grid min-h-screen place-items-center gap-2 p-4 text-center">
+        <div>
+          <p className="mb-2 text-muted-foreground">Board not found.</p>
+          <Button variant="outline" asChild><Link to="/">Back to boards</Link></Button>
+        </div>
+      </main>
+    )
+  }
+  if (!board) return <main className="p-6 text-sm text-muted-foreground">{error ?? 'Loading...'}</main>
 
   // Owners and editors can change the board; viewers are read-only.
   const canEdit = board.role !== 'viewer'
@@ -228,11 +250,9 @@ export default function BoardPage() {
     void run(() => api.post(`/cards/${activeId}/move`, { toColumnId: finalCol.id, afterCardId: finalCol.cards[index - 1]?.id ?? null }))
   }
 
-  // Prompts for a new board name and saves it.
-  function renameBoard() {
-    // The new name, trimmed; empty if cancelled.
-    const name = prompt('Board name', board!.name)?.trim()
-    if (name && name !== board!.name) void run(() => api.patch(`/boards/${board!.id}`, { name }))
+  // Saves a new board name (the rename dialog already trimmed it).
+  function saveBoardName(name: string) {
+    if (name !== board!.name) void run(() => api.patch(`/boards/${board!.id}`, { name }))
   }
 
   // Creates a column from the form input.
@@ -244,15 +264,9 @@ export default function BoardPage() {
     void run(() => api.post(`/boards/${board!.id}/columns`, { name }))
   }
 
-  // Prompts for a new column name and saves it.
-  const renameColumn = (col: Column) => {
-    const name = prompt('Column name', col.name)?.trim()
-    if (name && name !== col.name) void run(() => api.patch(`/columns/${col.id}`, { name }))
-  }
-
-  // Confirms, then deletes the column (its cards go with it).
-  const deleteColumn = (col: Column) => {
-    if (confirm(`Delete column "${col.name}" and its cards?`)) void run(() => api.delete(`/columns/${col.id}`))
+  // Saves a new column name from the rename dialog.
+  const saveColumnName = (col: Column, name: string) => {
+    if (name !== col.name) void run(() => api.patch(`/columns/${col.id}`, { name }))
   }
 
   // The card being dragged, used for the drag preview.
@@ -261,57 +275,68 @@ export default function BoardPage() {
   const activeColumn = dragging && isCol(dragging) ? cols.find((c) => c.id === parseId(dragging)) : undefined
 
   return (
-    <main style={{ padding: '1rem' }}>
-      <header style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <Link to="/">&larr; Boards</Link>
-        <h1 style={{ margin: 0 }}>{board.name}</h1>
-        {canEdit && <button onClick={renameBoard}>Rename</button>}
-        <small>{board.role}</small>
+    <div className="min-h-screen bg-muted/30">
+      <header className="flex items-center gap-2 border-b bg-background px-4 py-3">
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/" aria-label="Back to boards"><ArrowLeft /></Link>
+        </Button>
+        <h1 className="text-lg font-semibold">{board.name}</h1>
+        {canEdit && (
+          <Button variant="ghost" size="icon-sm" aria-label="Rename board" onClick={() => setDialog({ kind: 'renameBoard' })}>
+            <Pencil />
+          </Button>
+        )}
+        <span className="ml-auto text-xs capitalize text-muted-foreground">{board.role}</span>
       </header>
-      <FormError message={error} />
 
-      {/* Drag-and-drop area: wires sensors, collision rules and the drag handlers. */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={collisionDetection}
-        onDragStart={onDragStart}
-        onDragOver={onDragOver}
-        onDragEnd={onDragEnd}
-        onDragCancel={() => {
-          setDragging(null)
-          setDraft(null)
-        }}
-      >
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', overflowX: 'auto', marginTop: '1rem' }}>
-          {/* Makes the columns reorderable horizontally. */}
-          <SortableContext items={cols.map((c) => colKey(c.id))} strategy={horizontalListSortingStrategy}>
-            {cols.map((col) => (
-              <SortableColumn
-                key={col.id}
-                column={col}
-                canEdit={canEdit}
-                onRename={() => renameColumn(col)}
-                onDelete={() => deleteColumn(col)}
-                onOpenCard={setEditing}
-                onAddCard={(title) => run(() => api.post(`/columns/${col.id}/cards`, { title }))}
-              />
-            ))}
-          </SortableContext>
+      <main className="p-4">
+        {/* Drag-and-drop area: wires sensors, collision rules and the drag handlers. */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={collisionDetection}
+          onDragStart={onDragStart}
+          onDragOver={onDragOver}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => {
+            setDragging(null)
+            setDraft(null)
+          }}
+        >
+          <div className="flex items-start gap-4 overflow-x-auto pb-4">
+            {/* Makes the columns reorderable horizontally. */}
+            <SortableContext items={cols.map((c) => colKey(c.id))} strategy={horizontalListSortingStrategy}>
+              {cols.map((col) => (
+                <SortableColumn
+                  key={col.id}
+                  column={col}
+                  canEdit={canEdit}
+                  onRename={() => setDialog({ kind: 'renameColumn', col })}
+                  onDelete={() => setDialog({ kind: 'deleteColumn', col })}
+                  onOpenCard={setEditing}
+                  onAddCard={(title) => run(() => api.post(`/columns/${col.id}/cards`, { title }))}
+                />
+              ))}
+            </SortableContext>
 
-          {canEdit && (
-            <form onSubmit={addColumn} style={{ minWidth: 220 }}>
-              <input placeholder="New column" required maxLength={200} value={newColumn} onChange={(e) => setNewColumn(e.target.value)} />
-              <button type="submit">Add</button>
-            </form>
-          )}
-        </div>
+            {canEdit && (
+              <form onSubmit={addColumn} className="flex w-72 shrink-0 gap-2">
+                <Input placeholder="New column" required maxLength={200} value={newColumn} onChange={(e) => setNewColumn(e.target.value)} className="bg-background" />
+                <Button type="submit" variant="outline" size="icon" aria-label="Add column"><Plus /></Button>
+              </form>
+            )}
+          </div>
 
-        {/* The floating preview that follows the pointer while dragging. */}
-        <DragOverlay>
-          {activeCard && <div style={{ ...cardBoxStyle, boxShadow: 'var(--shadow)' }}><CardBody card={activeCard} /></div>}
-          {activeColumn && <div style={{ ...columnBoxStyle, boxShadow: 'var(--shadow)' }}><strong>{activeColumn.name}</strong> ({activeColumn.cards.length})</div>}
-        </DragOverlay>
-      </DndContext>
+          {/* The floating preview that follows the pointer while dragging. */}
+          <DragOverlay>
+            {activeCard && <CardFace card={activeCard} className="cursor-grabbing shadow-lg" />}
+            {activeColumn && (
+              <div className="w-72 rounded-xl bg-muted p-3 text-sm font-medium shadow-lg">
+                {activeColumn.name} <span className="text-muted-foreground">{activeColumn.cards.length}</span>
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      </main>
 
       {editing && (
         <CardDialog
@@ -323,13 +348,39 @@ export default function BoardPage() {
             await run(() => api.patch(`/cards/${editing.id}`, fields))
             setEditing(null)
           }}
-          onDelete={async () => {
-            if (!confirm('Delete this card?')) return
-            await run(() => api.delete(`/cards/${editing.id}`))
+          onDelete={() => {
+            // Close the edit dialog and ask for confirmation in its own dialog.
+            setDialog({ kind: 'deleteCard', card: editing })
             setEditing(null)
           }}
         />
       )}
-    </main>
+
+      {/* Rename / delete modals, one at a time. */}
+      {dialog?.kind === 'renameBoard' && (
+        <NameDialog title="Rename board" initial={board.name} onSubmit={saveBoardName} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.kind === 'renameColumn' && (
+        <NameDialog title="Rename column" initial={dialog.col.name} onSubmit={(name) => saveColumnName(dialog.col, name)} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.kind === 'deleteColumn' && (
+        <ConfirmDialog
+          title={`Delete "${dialog.col.name}"?`}
+          description="This column and all of its cards will be deleted."
+          confirmLabel="Delete column"
+          onConfirm={() => void run(() => api.delete(`/columns/${dialog.col.id}`))}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog?.kind === 'deleteCard' && (
+        <ConfirmDialog
+          title={`Delete "${dialog.card.title}"?`}
+          description="This card will be deleted."
+          confirmLabel="Delete card"
+          onConfirm={() => void run(() => api.delete(`/cards/${dialog.card.id}`))}
+          onClose={() => setDialog(null)}
+        />
+      )}
+    </div>
   )
 }

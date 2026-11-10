@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
+import { Button } from '@/components/ui/button'
 import { api } from '../api/client'
 import { Field, FormCard, FormError } from './Form'
 
@@ -39,17 +40,20 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <FormCard title="Reset password">
-        <p>This reset link is missing its token. <Link to="/forgot-password">Request a new one</Link>.</p>
+        <p className="text-sm text-muted-foreground">
+          This reset link is missing its token.{' '}
+          <Link to="/forgot-password" className="text-foreground underline-offset-4 hover:underline">Request a new one</Link>.
+        </p>
       </FormCard>
     )
   }
 
   return (
     <FormCard title="Choose a new password">
-      <form onSubmit={onSubmit}>
+      <form onSubmit={onSubmit} className="grid gap-4">
         <Field label="New password (min 8 characters)" type="password" required minLength={8} maxLength={128} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         <FormError message={error} />
-        <button type="submit" disabled={busy}>{busy ? 'Saving...' : 'Reset password'}</button>
+        <Button type="submit" disabled={busy}>{busy ? 'Saving...' : 'Reset password'}</Button>
       </form>
     </FormCard>
   )

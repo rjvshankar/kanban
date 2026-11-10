@@ -9,6 +9,7 @@ Mini Trello-style Kanban board.
 - Migrations: DbUp. Numbered scripts in `backend/Api/Migrations` (embedded resources), run at API startup.
   Never edit an applied script; add a new numbered one.
 - Frontend: Vite + React + TypeScript + ESLint in `frontend/`. Vite proxies `/api` to http://localhost:5047.
+  Styling: Tailwind CSS v4 + shadcn/ui (slate theme). Add components with `npx shadcn@latest add <name>` (lands in `src/components/ui/`). `@/` aliases `src/`.
 - Connection string lives in dotnet user-secrets (`ConnectionStrings:Default`), not in the repo.
 
 ## Run

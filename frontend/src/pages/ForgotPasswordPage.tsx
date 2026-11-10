@@ -3,6 +3,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
+import { Button } from '@/components/ui/button'
 import { api } from '../api/client'
 import { Field, FormCard, FormError } from './Form'
 
@@ -35,15 +36,15 @@ export default function ForgotPasswordPage() {
   return (
     <FormCard title="Forgot password">
       {sent ? (
-        <p>If that email is registered, a reset link has been sent.</p>
+        <p className="text-sm text-muted-foreground">If that email is registered, a reset link has been sent.</p>
       ) : (
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} className="grid gap-4">
           <Field label="Email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <FormError message={error} />
-          <button type="submit" disabled={busy}>{busy ? 'Sending...' : 'Send reset link'}</button>
+          <Button type="submit" disabled={busy}>{busy ? 'Sending...' : 'Send reset link'}</Button>
         </form>
       )}
-      <p><Link to="/login">Back to log in</Link></p>
+      <Link to="/login" className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Back to log in</Link>
     </FormCard>
   )
 }

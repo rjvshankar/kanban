@@ -3,9 +3,12 @@
 
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import type { Card, Column } from '../api/types'
-import { columnBoxStyle } from './board-styles'
 import { SortableCard } from './SortableCard'
 
 // Inputs: the column data, edit permission, and callbacks into BoardPage.
@@ -20,7 +23,7 @@ interface Props {
 
 // Renders the column; it is both a sortable item (horizontal) and a drop target for cards.
 export default function SortableColumn({ column, canEdit, onRename, onDelete, onOpenCard, onAddCard }: Props) {
-  // dnd-kit wiring for the column; the drag listeners are attached to the ⠿ handle only, so dragging a card doesn't drag the column.
+  // dnd-kit wiring for the column; the drag listeners are attached to the grip handle only, so dragging a card doesn't drag the column.
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: `col-${column.id}`,
     data: { type: 'column' },
@@ -30,26 +33,38 @@ export default function SortableColumn({ column, canEdit, onRename, onDelete, on
   return (
     <section
       ref={setNodeRef}
-      style={{ ...columnBoxStyle, transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={cn('w-72 shrink-0 rounded-xl bg-muted p-2', isDragging && 'opacity-40')}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>
+      <div className="flex items-center justify-between pb-2 pl-1">
+        <div className="flex min-w-0 items-center gap-1">
           {canEdit && (
-            <button ref={setActivatorNodeRef} {...attributes} {...listeners} title="Drag column" style={{ cursor: 'grab', touchAction: 'none' }}>⠿</button>
-          )}{' '}
-          <strong>{column.name}</strong>
-        </span>
+            <Button
+              ref={setActivatorNodeRef}
+              {...attributes}
+              {...listeners}
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Drag column"
+              className="cursor-grab touch-none text-muted-foreground"
+            >
+              <GripVertical />
+            </Button>
+          )}
+          <h2 className="truncate text-sm font-semibold">{column.name}</h2>
+          <span className="text-xs text-muted-foreground">{column.cards.length}</span>
+        </div>
         {canEdit && (
-          <span>
-            <button onClick={onRename} title="Rename">✎</button>
-            <button onClick={onDelete} title="Delete">✕</button>
-          </span>
+          <div className="flex">
+            <Button variant="ghost" size="icon-xs" aria-label="Rename column" onClick={onRename} className="text-muted-foreground"><Pencil /></Button>
+            <Button variant="ghost" size="icon-xs" aria-label="Delete column" onClick={onDelete} className="text-muted-foreground"><Trash2 /></Button>
+          </div>
         )}
       </div>
 
       <SortableContext items={column.cards.map((c) => `card-${c.id}`)} strategy={verticalListSortingStrategy}>
         {/* min-height keeps an empty column a drop target */}
-        <ul style={{ padding: 0, margin: '0.5rem 0', minHeight: 24 }}>
+        <ul className="m-0 flex min-h-6 flex-col gap-2 p-0">
           {column.cards.map((card) => (
             <SortableCard key={card.id} card={card} disabled={!canEdit} onOpen={() => onOpenCard(card)} />
           ))}
@@ -76,9 +91,9 @@ function AddCardForm({ onAdd }: { onAdd: (title: string) => Promise<void> }) {
   }
 
   return (
-    <form onSubmit={submit} style={{ display: 'flex', gap: '0.3rem' }}>
-      <input placeholder="Add a card" required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
-      <button type="submit">+</button>
+    <form onSubmit={submit} className="mt-2 flex gap-1">
+      <Input placeholder="Add a card" required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} className="h-8 min-w-0 flex-1 bg-background" />
+      <Button type="submit" variant="ghost" size="icon" aria-label="Add card"><Plus /></Button>
     </form>
   )
 }
