@@ -2,16 +2,25 @@
 
 A mini Trello-style Kanban board built with ASP.NET Core, SQL Server and React.
 
-**Status:** in development. Accounts, boards, columns, cards, drag and drop and real-time updates all work locally; production deployment is next (see [Roadmap](#roadmap)).
+**Status:** in development. Accounts, boards, columns, cards, drag and drop, real-time updates, board members with roles and archived-board restore all work locally; the purge job and production deployment are next (see [Roadmap](#roadmap)).
 
 ## Features
 
 - **Accounts:** register, log in and out, and reset a forgotten password by email. The session is a JWT in an httpOnly cookie, so JavaScript never touches the token.
-- **Boards:** create, rename and delete boards. Every board has members with a role (owner, editor or viewer); today only the creator (owner) is added.
+- **Boards:** create, rename and delete boards. The creator becomes the board's owner.
+- **Members and roles:** owners add people to a board (search by name or email), change their role and remove them. A board always keeps at least one owner. The Members dialog has a legend of what each role can do:
+
+  | Role | Can do |
+  |---|---|
+  | Owner | Everything: manage columns, rename or delete the board, manage members, plus all card actions |
+  | Editor | Create, edit, move and delete cards; cannot change columns or members |
+  | Viewer | Read-only |
+
+- **Archived boards:** a deleted board is archived for 30 days. Owners can restore it from the "Archived boards" section of the board list.
 - **Columns and cards:** add, rename, edit and delete. Cards have a title, description and due date.
 - **Drag and drop:** reorder cards and columns, and move cards between columns (mouse, touch and keyboard).
 - **Real-time updates:** changes show up instantly in every tab viewing the same board.
-- **Soft delete:** deleting a board, column or card hides it rather than removing the row.
+- **Soft delete:** deleting a board, column or card hides it rather than removing the row. A daily purge job that permanently removes boards archived for more than 30 days is planned (see [Roadmap](#roadmap)).
 
 ## Tech stack
 
@@ -100,6 +109,8 @@ All endpoints except the auth ones require login. `Api/Api.http` has ready-made 
 |---|---|
 | Auth | `POST /api/auth/register`, `login`, `logout`, `forgot-password`, `reset-password`; `GET /api/auth/me` |
 | Boards | `GET/POST /api/boards`; `GET/PATCH/DELETE /api/boards/{id}` (GET returns columns with their cards) |
+| Members (owner only) | `GET/POST /api/boards/{id}/members`; `PATCH/DELETE /api/boards/{id}/members/{userId}`; `GET /api/boards/{id}/members/candidates?q=` (user search, 2+ characters) |
+| Archive | `GET /api/boards/archived` (your restorable boards); `POST /api/boards/{id}/restore` |
 | Columns | `POST /api/boards/{id}/columns`; `PATCH/DELETE /api/columns/{id}`; `POST /api/columns/{id}/move` |
 | Cards | `POST /api/columns/{id}/cards`; `PATCH/DELETE /api/cards/{id}`; `POST /api/cards/{id}/move` |
 | Real-time | SignalR hub at `/hubs/board` (`JoinBoard`; server pushes `BoardChanged`) |
@@ -107,7 +118,9 @@ All endpoints except the auth ones require login. `Api/Api.http` has ready-made 
 Design notes:
 
 - **Ordering:** columns and cards have gapped integer positions (1000, 2000, ...). A move sends "place after this sibling" and the server picks the position, renumbering a container only when the gap runs out.
-- **Access control:** non-members get 404 (not 403) so board ids can't be probed; viewers can read but not edit; only owners can delete a board.
+- **Access control:** non-members get 404 (not 403) so board ids can't be probed. Viewers are read-only, editors can change cards, and only owners can manage columns, rename or delete the board, and manage members.
+- **Members:** the last owner of a board can't be demoted or removed (409). User search is scoped to a board, owner-only, needs 2+ characters and returns at most 10 results, so the user list can't be dumped.
+- **Archive:** restore is a single atomic update that succeeds only for an owner of an archived board still inside the 30-day window (`ArchivePolicy.RetentionDays`); everything else returns 404.
 - **Real-time:** after every change the server pings the board's SignalR group and open pages refetch the board. The server stays the source of truth.
 
 ## Database migrations
@@ -117,7 +130,7 @@ Schema changes are versioned SQL scripts in `backend/Api/Migrations`, embedded i
 - Name scripts with a zero-padded number prefix, for example `0004_add_labels.sql`.
 - Never edit a script that has already been applied. Add a new numbered script instead.
 
-Current scripts: `0001` users, `0002` password reset tokens, `0003` boards, board members, columns and cards.
+Current scripts: `0001` users, `0002` password reset tokens, `0003` boards, board members, columns and cards. Roles (`owner`, `editor`, `viewer`) are enforced by a CHECK constraint from `0003`.
 
 ## Project structure
 
@@ -125,7 +138,7 @@ Current scripts: `0001` users, `0002` password reset tokens, `0003` boards, boar
 kanban/
 ├── backend/
 │   └── Api/
-│       ├── Controllers/   Auth, password reset, boards, columns, cards
+│       ├── Controllers/   Auth, password reset, boards, board members, columns, cards
 │       ├── Data/          Connection factory, repositories, ordering logic, migration runner
 │       ├── Dtos/          Request/response shapes with validation
 │       ├── Hubs/          SignalR board hub
@@ -138,7 +151,8 @@ kanban/
         ├── api/           fetch wrapper and API types
         ├── auth/          AuthProvider, useAuth, route guards
         ├── components/    shadcn/ui components and shared dialogs
-        ├── pages/         Login, register, password reset, board list, board view
+        ├── lib/           Shared helpers, e.g. role descriptions
+        ├── pages/         Login, register, password reset, board list, board view, members dialog
         └── realtime/      SignalR hook for live board updates
 ```
 
@@ -156,14 +170,16 @@ Done:
 - [x] Drag-and-drop for cards and columns (dnd-kit)
 - [x] Minimal UI restyle (Tailwind CSS + shadcn/ui)
 - [x] Real-time board updates across tabs (SignalR)
+- [x] Board member management with owner/editor/viewer roles
+- [x] Archived-board restore (30-day window)
 
 Up next:
 
+- [ ] Daily purge job: permanently delete boards archived for more than 30 days, moving them (and their columns and cards) to `DeletedBoards`, `DeletedColumns` and `DeletedCards`
 - [ ] Production deployment
 
 Later:
 
-- [ ] Board member management (invite/add members, change roles)
 - [ ] Live updates on the board list page
 - [ ] Presence indicators (who is viewing the board)
 - [ ] Live cursors

@@ -38,4 +38,5 @@ Next: purge job (see below), then production deployment.
 ## Notes
 - Users table exists (migration 0001).
 - Shell is zsh: single-quote any string containing `!`.
+- After completing a feature, update README.md (features, API table, structure, roadmap) and the Planned section here.
 - Respond with brief and sharp points. Do not over explain process unless explicitly asked for. 
