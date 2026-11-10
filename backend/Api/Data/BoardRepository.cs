@@ -105,4 +105,37 @@ public sealed class BoardRepository(IDbConnectionFactory db) : IBoardRepository
             cancellationToken: ct));
         return n > 0;
     }
+
+    public async Task<List<ArchivedBoardRow>> ListArchivedAsync(int userId, CancellationToken ct = default)
+    {
+        await using var conn = await db.OpenAsync(ct);
+        var rows = await conn.QueryAsync<ArchivedBoardRow>(new CommandDefinition(
+            """
+            SELECT b.Id, b.Name, b.DeletedAt
+            FROM dbo.Boards b
+            JOIN dbo.BoardMembers m ON m.BoardId = b.Id
+            WHERE m.UserId = @UserId AND m.Role = 'owner'
+              AND b.DeletedAt IS NOT NULL AND b.DeletedAt > DATEADD(DAY, -@Days, SYSUTCDATETIME())
+            ORDER BY b.DeletedAt DESC, b.Id DESC
+            """,
+            new { UserId = userId, Days = ArchivePolicy.RetentionDays },
+            cancellationToken: ct));
+        return rows.AsList();
+    }
+
+    public async Task<bool> RestoreAsync(int userId, int boardId, CancellationToken ct = default)
+    {
+        await using var conn = await db.OpenAsync(ct);
+        var n = await conn.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE b SET DeletedAt = NULL
+            FROM dbo.Boards b
+            WHERE b.Id = @BoardId
+              AND b.DeletedAt IS NOT NULL AND b.DeletedAt > DATEADD(DAY, -@Days, SYSUTCDATETIME())
+              AND EXISTS (SELECT 1 FROM dbo.BoardMembers m WHERE m.BoardId = b.Id AND m.UserId = @UserId AND m.Role = 'owner')
+            """,
+            new { UserId = userId, BoardId = boardId, Days = ArchivePolicy.RetentionDays },
+            cancellationToken: ct));
+        return n > 0;
+    }
 }

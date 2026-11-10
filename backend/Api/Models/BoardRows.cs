@@ -9,6 +9,13 @@ public sealed class BoardSummary
     public DateTime CreatedAt { get; set; }
 }
 
+public sealed class ArchivedBoardRow
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public DateTime DeletedAt { get; set; }
+}
+
 public sealed class BoardRow
 {
     public int Id { get; set; }

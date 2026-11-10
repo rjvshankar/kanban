@@ -47,3 +47,11 @@ export interface Member {
   email: string
   role: Role | ''
 }
+
+// A deleted board that can still be restored (owners only, until the purge window ends).
+export interface ArchivedBoard {
+  id: number
+  name: string
+  deletedAt: string
+  daysLeft: number
+}

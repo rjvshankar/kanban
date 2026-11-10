@@ -1,5 +1,11 @@
 namespace Api.Models;
 
+public static class ArchivePolicy
+{
+    /// <summary>Days a deleted board stays restorable. The daily purge job must use the same number.</summary>
+    public const int RetentionDays = 30;
+}
+
 public static class BoardRole
 {
     public const string Owner = "owner";

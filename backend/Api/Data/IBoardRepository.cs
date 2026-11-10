@@ -14,4 +14,13 @@ public interface IBoardRepository
     Task<BoardContents?> GetContentsAsync(int boardId, CancellationToken ct = default);
     Task<bool> RenameAsync(int boardId, string name, CancellationToken ct = default);
     Task<bool> SoftDeleteAsync(int boardId, CancellationToken ct = default);
+
+    /// <summary>Boards the user owns that were deleted within the retention window (restorable).</summary>
+    Task<List<ArchivedBoardRow>> ListArchivedAsync(int userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Un-deletes an archived board the user owns, if it's still inside the retention window.
+    /// False if there is nothing to restore (not archived, expired, or the user isn't an owner).
+    /// </summary>
+    Task<bool> RestoreAsync(int userId, int boardId, CancellationToken ct = default);
 }

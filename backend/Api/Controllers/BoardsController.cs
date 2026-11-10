@@ -20,6 +20,32 @@ public sealed class BoardsController(IBoardRepository boards, IBoardNotifier not
         return Ok(list.Select(b => new BoardSummaryResponse(b.Id, b.Name, b.Role, b.CreatedAt)));
     }
 
+    // Boards you deleted that can still be restored (owners only, within the retention window).
+    [HttpGet("archived")]
+    public async Task<IActionResult> ListArchived(CancellationToken ct)
+    {
+        if (!User.TryGetUserId(out var userId)) return Unauthorized();
+
+        var now = DateTime.UtcNow;
+        var list = await boards.ListArchivedAsync(userId, ct);
+        return Ok(list.Select(b =>
+        {
+            var deletedAt = DateTime.SpecifyKind(b.DeletedAt, DateTimeKind.Utc);
+            var daysLeft = (int)Math.Ceiling((deletedAt.AddDays(ArchivePolicy.RetentionDays) - now).TotalDays);
+            return new ArchivedBoardResponse(b.Id, b.Name, deletedAt, Math.Max(daysLeft, 0));
+        }));
+    }
+
+    [HttpPost("{id:int}/restore")]
+    public async Task<IActionResult> Restore(int id, CancellationToken ct)
+    {
+        if (!User.TryGetUserId(out var userId)) return Unauthorized();
+
+        // 404 for everything that isn't restorable by this user, so deleted boards can't be probed.
+        if (!await boards.RestoreAsync(userId, id, ct)) return NotFound();
+        return NoContent();
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(CreateBoardRequest req, CancellationToken ct)
     {

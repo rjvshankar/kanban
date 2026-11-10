@@ -1,14 +1,14 @@
 // Home page: lists the boards you belong to, with create and delete (owner only).
 
 import { useEffect, useState, type FormEvent } from 'react'
-import { LogOut, Plus, Trash2 } from 'lucide-react'
+import { LogOut, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { api } from '../api/client'
-import type { BoardSummary } from '../api/types'
+import type { ArchivedBoard, BoardSummary } from '../api/types'
 import { useAuth } from '../auth/auth-context'
 
 // Board list screen.
@@ -19,6 +19,8 @@ export default function BoardListPage() {
   const [boards, setBoards] = useState<BoardSummary[] | null>(null)
   // Bumping this re-runs the load effect, which is how we refetch.
   const [version, setVersion] = useState(0)
+  // Deleted boards the user can still restore; empty until loaded.
+  const [archived, setArchived] = useState<ArchivedBoard[]>([])
   // Form field: name of the board to create.
   const [name, setName] = useState('')
   // The board waiting for delete confirmation, or null.
@@ -32,6 +34,10 @@ export default function BoardListPage() {
       .get<BoardSummary[]>('/boards')
       .then((b) => !cancelled && setBoards(b))
       .catch((e) => !cancelled && toast.error(e instanceof Error ? e.message : 'Failed to load boards.'))
+    api
+      .get<ArchivedBoard[]>('/boards/archived')
+      .then((a) => !cancelled && setArchived(a))
+      .catch(() => {}) // the archive list is optional; the main list already reports load errors
     return () => {
       cancelled = true
     }
@@ -59,6 +65,18 @@ export default function BoardListPage() {
       reload()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not delete board.')
+    }
+  }
+
+  // Brings an archived board back (owners only), then refetches both lists.
+  async function onRestore(b: ArchivedBoard) {
+    try {
+      await api.post(`/boards/${b.id}/restore`)
+      toast.success(`Restored "${b.name}".`)
+      reload()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not restore board.')
+      reload()
     }
   }
 
@@ -100,6 +118,26 @@ export default function BoardListPage() {
               </li>
             ))}
           </ul>
+        )}
+
+        {archived.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-1 text-lg font-semibold tracking-tight">Archived boards</h2>
+            <p className="mb-3 text-sm text-muted-foreground">Deleted boards are permanently removed after 30 days.</p>
+            <ul className="grid gap-2">
+              {archived.map((b) => (
+                <li key={b.id} className="flex items-center justify-between rounded-lg border bg-card px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-muted-foreground">{b.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {b.daysLeft === 0 ? 'Removed soon' : `${b.daysLeft} day${b.daysLeft === 1 ? '' : 's'} left to restore`}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => void onRestore(b)}><RotateCcw /> Restore</Button>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </main>
 
