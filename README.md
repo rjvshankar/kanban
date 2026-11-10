@@ -94,7 +94,7 @@ kanban/
 - [x] DbUp migrations and `Users` table
 - [x] JWT authentication
 - [x] Front end pages for login and password resets
-- [ ] Boards, columns and cards (schema and CRUD API)
-- [ ] Drag-and-drop board UI
+- [x] Boards, columns and cards (schema and CRUD API)
+- [x] Drag-and-drop board UI
 - [ ] Real-time updates across tabs (SignalR)
 - [ ] Production deployment
