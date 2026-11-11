@@ -16,12 +16,18 @@ Mini Trello-style Kanban board.
 - `docker start kanban-db kanban-mailpit` (Mailpit: fake SMTP on 1025, inbox UI at http://localhost:8025)
 - `cd backend/Api && dotnet run` (http://localhost:5047)
 - `cd frontend && npm run dev` (http://localhost:5173)
+- Backend tests: `cd backend/Api.Tests && dotnet run` (or `dotnet test` from `backend/`). Needs Docker running; starts its own throwaway SQL Server container (does not touch `kanban-db`). ~25s.
 
 ## Planned
 Done: JWT auth, boards/columns/cards CRUD, drag and drop (dnd-kit), real-time board updates (SignalR hub `/hubs/board`, "BoardChanged" ping then refetch).
 Also done: board member management (roles owner/editor/viewer; only owners manage columns, board settings and members; editors do cards; viewers read-only), archived-board restore (owners, within 30 days).
 Also done: daily purge job (stored proc `PurgeArchivedBoards` called by `ArchivePurgeService`; boards archived >30 days move to `Deleted*` tables) and restore from the long-term archive (`RestorePurgedBoard`: purged -> archived -> owner restores as usual).
-Next: testing (backend unit/integration tests, frontend tests, end-to-end; scope and tooling to be decided).
+Next: testing, in this order (full suite: backend, frontend, unit, end-to-end regression):
+1. Backend integration tests (xUnit v3 + Testcontainers MSSQL + WebApplicationFactory + Respawn + Shouldly): DONE, scaffolded in `backend/Api.Tests` (61 tests: auth, password reset, boards, roles matrix, members, cards, archive/purge/restore, SignalR).
+2. Backend unit tests (NSubstitute) for logic-heavy services.
+3. Frontend: Vitest + React Testing Library + MSW (dnd-kit drag-and-drop is covered in E2E, not jsdom).
+4. End-to-end regression: Playwright against the real stack (`e2e/`; dedicated test DB, Mailpit API for reset emails, two browser contexts for real-time/roles).
+5. CI: GitHub Actions running backend, frontend and Playwright jobs per PR; coverage via Coverlet / Vitest v8 (tracked, no threshold yet).
 
 ## Later (decided to do later)
 - Live updates on the board list page (new/renamed/deleted boards appear without a refresh).
@@ -40,6 +46,14 @@ Next: testing (backend unit/integration tests, frontend tests, end-to-end; scope
 - `dbo.PurgeArchivedBoards @RetentionDays`: batched, moves board + members + columns + cards (incl. already soft-deleted ones). `ArchivePurgeService` runs it at startup and every 24h with `ArchivePolicy.RetentionDays` (`Models/BoardRole.cs`).
 - `dbo.RestorePurgedBoard @BoardId, @UserId`: only someone who was an owner at purge time; re-inserts with IDENTITY_INSERT as an ARCHIVED board (fresh 30-day window) and removes the Deleted* rows. API: `GET /api/boards/purged`, `POST /api/boards/{id}/restore-purged`.
 - **Any migration that adds/changes a column on Boards, Columns, Cards or BoardMembers must also change the matching `Deleted*` table and recreate both procs (`CREATE OR ALTER`, explicit column lists).**
+
+## Testing
+- `backend/Kanban.slnx` holds `Api` and `Api.Tests`. `Program.cs` ends with `public partial class Program;` so `WebApplicationFactory<Program>` works.
+- `Api.Tests/Infrastructure`: `ApiFixture` (one MSSQL container per run, Respawn reset before each test, DbUp journal `SchemaVersions` kept), `ApiFactory` (real app, only `IEmailSender` swapped for `FakeEmailSender`), `IntegrationTest` base (`NewUserAsync`, `CreateBoardAsync`, etc.).
+- Config reaches the app via environment variables (`ConnectionStrings__Default`, `Jwt__Key`, `Smtp__*`) set before the host starts, because `Program.cs` reads config eagerly.
+- Tests share one DB, so they run serially (single xUnit collection). Tests touching the in-memory rate limiter use `CreateIsolatedFactory()` for fresh counters.
+- SignalR tests use long polling over the TestServer with the login cookie in a `Cookie` header.
+- New migrations/features: add integration tests alongside; changes to Boards/Columns/Cards/BoardMembers need purge/restore test coverage.
 
 ## Notes
 - Users table exists (migration 0001).

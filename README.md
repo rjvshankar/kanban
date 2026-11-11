@@ -2,7 +2,7 @@
 
 A mini Trello-style Kanban board built with ASP.NET Core, SQL Server and React.
 
-**Status:** in development. Accounts, boards, columns, cards, drag and drop, real-time updates, board members with roles and archived-board restore all work locally; the daily purge job and long-term archive are done, and testing is next (see [Roadmap](#roadmap)).
+**Status:** in development. Accounts, boards, columns, cards, drag and drop, real-time updates, board members with roles and archived-board restore all work locally; the daily purge job and long-term archive are done, and the test suite is being built, backend integration tests first (see [Roadmap](#roadmap)).
 
 ## Features
 
@@ -126,6 +126,18 @@ Design notes:
 - **Purge:** the logic is in SQL (`dbo.PurgeArchivedBoards`, batched, one transaction per batch). `ArchivePurgeService` only schedules it: once at startup, then every 24 hours. `dbo.RestorePurgedBoard` reverses it for former owners, keeping original ids.
 - **Real-time:** after every change the server pings the board's SignalR group and open pages refetch the board. The server stays the source of truth.
 
+## Testing
+
+Backend integration tests live in `backend/Api.Tests` (xUnit v3, Shouldly, Testcontainers, Respawn). They boot the real API in-process against a throwaway SQL Server container, so migrations and stored procedures are exercised for real. Docker must be running; `kanban-db` is not touched.
+
+```bash
+cd backend/Api.Tests && dotnet run      # or: cd backend && dotnet test
+```
+
+Covered so far: registration and login, password reset (including rate limiting), boards, the owner/editor/viewer permission matrix, member management, cards, archive, purge and restore, and SignalR board pings.
+
+Test plan, in order: backend integration (done) → backend unit tests (NSubstitute) → frontend (Vitest, React Testing Library, MSW) → end-to-end regression (Playwright) → CI (GitHub Actions) with coverage reporting.
+
 ## Database migrations
 
 Schema changes are versioned SQL scripts in `backend/Api/Migrations`, embedded in the assembly and applied in filename order by [DbUp](https://dbup.readthedocs.io/) at API startup. DbUp records applied scripts in the `SchemaVersions` table.
@@ -141,6 +153,8 @@ Current scripts: `0001` users, `0002` password reset tokens, `0003` boards, boar
 ```
 kanban/
 ├── backend/
+│   ├── Kanban.slnx
+│   ├── Api.Tests/         Integration tests (xUnit, Testcontainers); Infrastructure/ holds fixtures
 │   └── Api/
 │       ├── Controllers/   Auth, password reset, boards, board members, columns, cards
 │       ├── Data/          Connection factory, repositories, ordering logic, migration runner
@@ -180,7 +194,11 @@ Done:
 
 Up next:
 
-- [ ] Testing (backend unit and integration tests, frontend tests, end-to-end; tooling to be decided)
+- [x] Backend integration tests (xUnit, Testcontainers, Respawn)
+- [ ] Backend unit tests
+- [ ] Frontend tests (Vitest, React Testing Library, MSW)
+- [ ] End-to-end regression tests (Playwright)
+- [ ] CI pipeline (GitHub Actions) and coverage reporting
 
 Later:
 

@@ -125,3 +125,6 @@ app.MapGet("/api/health", async (IDbConnectionFactory db, CancellationToken ct) 
 });
 
 app.Run();
+
+// Exposes the top-level Program class to the test project (WebApplicationFactory<Program>).
+public partial class Program;
