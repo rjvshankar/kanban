@@ -21,7 +21,7 @@ Mini Trello-style Kanban board.
 Done: JWT auth, boards/columns/cards CRUD, drag and drop (dnd-kit), real-time board updates (SignalR hub `/hubs/board`, "BoardChanged" ping then refetch).
 Also done: board member management (roles owner/editor/viewer; only owners manage columns, board settings and members; editors do cards; viewers read-only), archived-board restore (owners, within 30 days).
 Also done: daily purge job (stored proc `PurgeArchivedBoards` called by `ArchivePurgeService`; boards archived >30 days move to `Deleted*` tables) and restore from the long-term archive (`RestorePurgedBoard`: purged -> archived -> owner restores as usual).
-Next: production deployment.
+Next: testing (backend unit/integration tests, frontend tests, end-to-end; scope and tooling to be decided).
 
 ## Later (decided to do later)
 - Live updates on the board list page (new/renamed/deleted boards appear without a refresh).

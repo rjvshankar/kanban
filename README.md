@@ -2,7 +2,7 @@
 
 A mini Trello-style Kanban board built with ASP.NET Core, SQL Server and React.
 
-**Status:** in development. Accounts, boards, columns, cards, drag and drop, real-time updates, board members with roles and archived-board restore all work locally; the daily purge job and long-term archive are done, and production deployment is next (see [Roadmap](#roadmap)).
+**Status:** in development. Accounts, boards, columns, cards, drag and drop, real-time updates, board members with roles and archived-board restore all work locally; the daily purge job and long-term archive are done, and testing is next (see [Roadmap](#roadmap)).
 
 ## Features
 
@@ -180,7 +180,7 @@ Done:
 
 Up next:
 
-- [ ] Production deployment
+- [ ] Testing (backend unit and integration tests, frontend tests, end-to-end; tooling to be decided)
 
 Later:
 
