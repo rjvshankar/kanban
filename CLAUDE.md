@@ -20,10 +20,10 @@ Mini Trello-style Kanban board.
 ## Planned
 Done: JWT auth, boards/columns/cards CRUD, drag and drop (dnd-kit), real-time board updates (SignalR hub `/hubs/board`, "BoardChanged" ping then refetch).
 Also done: board member management (roles owner/editor/viewer; only owners manage columns, board settings and members; editors do cards; viewers read-only), archived-board restore (owners, within 30 days).
-Next: purge job (see below), then production deployment.
+Also done: daily purge job (stored proc `PurgeArchivedBoards` called by `ArchivePurgeService`; boards archived >30 days move to `Deleted*` tables) and restore from the long-term archive (`RestorePurgedBoard`: purged -> archived -> owner restores as usual).
+Next: production deployment.
 
 ## Later (decided to do later)
-- Daily SQL job: permanently purge boards archived >30 days. Moves rows from Boards/Columns/Cards into DeletedBoards/DeletedColumns/DeletedCards, then removes them from live tables. Do before prod deploy. Retention is `ArchivePolicy.RetentionDays` (30) in `Models/BoardRole.cs`; the job must use the same number.
 - Live updates on the board list page (new/renamed/deleted boards appear without a refresh).
 - Presence indicators (avatars of who is viewing the board right now).
 - Live cursors (see collaborators' pointers and drags in real time).
@@ -34,6 +34,12 @@ Next: purge job (see below), then production deployment.
 - Move rate-limit counters to Redis (or similar) so they survive restarts and work across instances.
 - Rate limit login (not limited yet).
 - Invalidate old login cookies after a password reset (JWTs stay valid up to 60 min). Fix: per-user token version checked on each request.
+
+## Purge / long-term archive
+- Migration 0004: `DeletedBoards/DeletedColumns/DeletedCards/DeletedBoardMembers` mirror the live tables (+ `PurgedAt`, original ids, no identity/FKs), kept forever.
+- `dbo.PurgeArchivedBoards @RetentionDays`: batched, moves board + members + columns + cards (incl. already soft-deleted ones). `ArchivePurgeService` runs it at startup and every 24h with `ArchivePolicy.RetentionDays` (`Models/BoardRole.cs`).
+- `dbo.RestorePurgedBoard @BoardId, @UserId`: only someone who was an owner at purge time; re-inserts with IDENTITY_INSERT as an ARCHIVED board (fresh 30-day window) and removes the Deleted* rows. API: `GET /api/boards/purged`, `POST /api/boards/{id}/restore-purged`.
+- **Any migration that adds/changes a column on Boards, Columns, Cards or BoardMembers must also change the matching `Deleted*` table and recreate both procs (`CREATE OR ALTER`, explicit column lists).**
 
 ## Notes
 - Users table exists (migration 0001).

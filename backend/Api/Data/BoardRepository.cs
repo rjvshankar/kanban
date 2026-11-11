@@ -138,4 +138,41 @@ public sealed class BoardRepository(IDbConnectionFactory db) : IBoardRepository
             cancellationToken: ct));
         return n > 0;
     }
+
+    public async Task<List<PurgedBoardRow>> ListPurgedAsync(int userId, CancellationToken ct = default)
+    {
+        await using var conn = await db.OpenAsync(ct);
+        var rows = await conn.QueryAsync<PurgedBoardRow>(new CommandDefinition(
+            """
+            SELECT b.Id, b.Name, b.PurgedAt
+            FROM dbo.DeletedBoards b
+            JOIN dbo.DeletedBoardMembers m ON m.BoardId = b.Id
+            WHERE m.UserId = @UserId AND m.Role = 'owner'
+            ORDER BY b.PurgedAt DESC, b.Id DESC
+            """,
+            new { UserId = userId },
+            cancellationToken: ct));
+        return rows.AsList();
+    }
+
+    public async Task<bool> RestorePurgedAsync(int userId, int boardId, CancellationToken ct = default)
+    {
+        await using var conn = await db.OpenAsync(ct);
+        return await conn.ExecuteScalarAsync<int>(new CommandDefinition(
+            "dbo.RestorePurgedBoard",
+            new { BoardId = boardId, UserId = userId },
+            commandType: System.Data.CommandType.StoredProcedure,
+            cancellationToken: ct)) == 1;
+    }
+
+    public async Task<int> PurgeArchivedAsync(CancellationToken ct = default)
+    {
+        await using var conn = await db.OpenAsync(ct);
+        return await conn.ExecuteScalarAsync<int>(new CommandDefinition(
+            "dbo.PurgeArchivedBoards",
+            new { RetentionDays = ArchivePolicy.RetentionDays },
+            commandType: System.Data.CommandType.StoredProcedure,
+            commandTimeout: 300,
+            cancellationToken: ct));
+    }
 }

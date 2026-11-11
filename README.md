@@ -2,7 +2,7 @@
 
 A mini Trello-style Kanban board built with ASP.NET Core, SQL Server and React.
 
-**Status:** in development. Accounts, boards, columns, cards, drag and drop, real-time updates, board members with roles and archived-board restore all work locally; the purge job and production deployment are next (see [Roadmap](#roadmap)).
+**Status:** in development. Accounts, boards, columns, cards, drag and drop, real-time updates, board members with roles and archived-board restore all work locally; the daily purge job and long-term archive are done, and production deployment is next (see [Roadmap](#roadmap)).
 
 ## Features
 
@@ -17,10 +17,11 @@ A mini Trello-style Kanban board built with ASP.NET Core, SQL Server and React.
   | Viewer | Read-only |
 
 - **Archived boards:** a deleted board is archived for 30 days. Owners can restore it from the "Archived boards" section of the board list.
+- **Long-term archive:** after 30 days a daily job moves the board (with its members, columns and cards) to separate `Deleted*` tables, kept forever. Anyone who was an owner at that point can retrieve it from the "Long-term archive" section; it returns to "Archived boards" with a fresh 30 days, and an owner restores it from there.
 - **Columns and cards:** add, rename, edit and delete. Cards have a title, description and due date.
 - **Drag and drop:** reorder cards and columns, and move cards between columns (mouse, touch and keyboard).
 - **Real-time updates:** changes show up instantly in every tab viewing the same board.
-- **Soft delete:** deleting a board, column or card hides it rather than removing the row. A daily purge job that permanently removes boards archived for more than 30 days is planned (see [Roadmap](#roadmap)).
+- **Soft delete:** deleting a board, column or card hides it rather than removing the row. Boards archived for more than 30 days are moved out of the live tables by the daily purge job (see Long-term archive).
 
 ## Tech stack
 
@@ -111,6 +112,7 @@ All endpoints except the auth ones require login. `Api/Api.http` has ready-made 
 | Boards | `GET/POST /api/boards`; `GET/PATCH/DELETE /api/boards/{id}` (GET returns columns with their cards) |
 | Members (owner only) | `GET/POST /api/boards/{id}/members`; `PATCH/DELETE /api/boards/{id}/members/{userId}`; `GET /api/boards/{id}/members/candidates?q=` (user search, 2+ characters) |
 | Archive | `GET /api/boards/archived` (your restorable boards); `POST /api/boards/{id}/restore` |
+| Long-term archive | `GET /api/boards/purged` (boards you owned when purged); `POST /api/boards/{id}/restore-purged` (moves it back to archived) |
 | Columns | `POST /api/boards/{id}/columns`; `PATCH/DELETE /api/columns/{id}`; `POST /api/columns/{id}/move` |
 | Cards | `POST /api/columns/{id}/cards`; `PATCH/DELETE /api/cards/{id}`; `POST /api/cards/{id}/move` |
 | Real-time | SignalR hub at `/hubs/board` (`JoinBoard`; server pushes `BoardChanged`) |
@@ -121,6 +123,7 @@ Design notes:
 - **Access control:** non-members get 404 (not 403) so board ids can't be probed. Viewers are read-only, editors can change cards, and only owners can manage columns, rename or delete the board, and manage members.
 - **Members:** the last owner of a board can't be demoted or removed (409). User search is scoped to a board, owner-only, needs 2+ characters and returns at most 10 results, so the user list can't be dumped.
 - **Archive:** restore is a single atomic update that succeeds only for an owner of an archived board still inside the 30-day window (`ArchivePolicy.RetentionDays`); everything else returns 404.
+- **Purge:** the logic is in SQL (`dbo.PurgeArchivedBoards`, batched, one transaction per batch). `ArchivePurgeService` only schedules it: once at startup, then every 24 hours. `dbo.RestorePurgedBoard` reverses it for former owners, keeping original ids.
 - **Real-time:** after every change the server pings the board's SignalR group and open pages refetch the board. The server stays the source of truth.
 
 ## Database migrations
@@ -129,8 +132,9 @@ Schema changes are versioned SQL scripts in `backend/Api/Migrations`, embedded i
 
 - Name scripts with a zero-padded number prefix, for example `0004_add_labels.sql`.
 - Never edit a script that has already been applied. Add a new numbered script instead.
+- If a script adds or changes a column on `Boards`, `Columns`, `Cards` or `BoardMembers`, make the same change to the matching `Deleted*` table and recreate `PurgeArchivedBoards` and `RestorePurgedBoard` (`CREATE OR ALTER`), or purge and restore will break.
 
-Current scripts: `0001` users, `0002` password reset tokens, `0003` boards, board members, columns and cards. Roles (`owner`, `editor`, `viewer`) are enforced by a CHECK constraint from `0003`.
+Current scripts: `0001` users, `0002` password reset tokens, `0003` boards, board members, columns and cards, `0004` `Deleted*` archive tables and the purge/restore stored procedures. Roles (`owner`, `editor`, `viewer`) are enforced by a CHECK constraint from `0003`.
 
 ## Project structure
 
@@ -144,7 +148,7 @@ kanban/
 │       ├── Hubs/          SignalR board hub
 │       ├── Migrations/    Numbered DbUp SQL scripts
 │       ├── Models/        Entities and query row shapes
-│       ├── Services/      Tokens, email, rate limits, board change notifier
+│       ├── Services/      Tokens, email, rate limits, board change notifier, daily archive purge
 │       └── Program.cs     Service registration, startup, health endpoint
 └── frontend/
     └── src/
@@ -172,10 +176,10 @@ Done:
 - [x] Real-time board updates across tabs (SignalR)
 - [x] Board member management with owner/editor/viewer roles
 - [x] Archived-board restore (30-day window)
+- [x] Daily purge job and long-term archive with restore
 
 Up next:
 
-- [ ] Daily purge job: permanently delete boards archived for more than 30 days, moving them (and their columns and cards) to `DeletedBoards`, `DeletedColumns` and `DeletedCards`
 - [ ] Production deployment
 
 Later:

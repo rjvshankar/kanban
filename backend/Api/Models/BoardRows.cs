@@ -16,6 +16,13 @@ public sealed class ArchivedBoardRow
     public DateTime DeletedAt { get; set; }
 }
 
+public sealed class PurgedBoardRow
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public DateTime PurgedAt { get; set; }
+}
+
 public sealed class BoardRow
 {
     public int Id { get; set; }

@@ -46,6 +46,26 @@ public sealed class BoardsController(IBoardRepository boards, IBoardNotifier not
         return NoContent();
     }
 
+    // Boards purged to the long-term archive that you owned at the time. No expiry.
+    [HttpGet("purged")]
+    public async Task<IActionResult> ListPurged(CancellationToken ct)
+    {
+        if (!User.TryGetUserId(out var userId)) return Unauthorized();
+
+        var list = await boards.ListPurgedAsync(userId, ct);
+        return Ok(list.Select(b => new PurgedBoardResponse(b.Id, b.Name, DateTime.SpecifyKind(b.PurgedAt, DateTimeKind.Utc))));
+    }
+
+    // Moves a purged board back as an archived board; the owner then restores it normally.
+    [HttpPost("{id:int}/restore-purged")]
+    public async Task<IActionResult> RestorePurged(int id, CancellationToken ct)
+    {
+        if (!User.TryGetUserId(out var userId)) return Unauthorized();
+
+        if (!await boards.RestorePurgedAsync(userId, id, ct)) return NotFound();
+        return NoContent();
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(CreateBoardRequest req, CancellationToken ct)
     {

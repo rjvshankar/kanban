@@ -29,6 +29,7 @@ builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IBoardNotifier, BoardNotifier>();
+builder.Services.AddHostedService<ArchivePurgeService>();
 
 builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection(JwtOptions.Section))

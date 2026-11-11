@@ -23,4 +23,16 @@ public interface IBoardRepository
     /// False if there is nothing to restore (not archived, expired, or the user isn't an owner).
     /// </summary>
     Task<bool> RestoreAsync(int userId, int boardId, CancellationToken ct = default);
+
+    /// <summary>Boards the user owned when they were purged to the long-term archive (restorable, no time limit).</summary>
+    Task<List<PurgedBoardRow>> ListPurgedAsync(int userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Moves a purged board back into the live tables as an archived board (fresh retention window).
+    /// False if it doesn't exist or the user wasn't an owner when it was purged.
+    /// </summary>
+    Task<bool> RestorePurgedAsync(int userId, int boardId, CancellationToken ct = default);
+
+    /// <summary>Moves boards archived at least ArchivePolicy.RetentionDays ago to the Deleted* tables. Returns how many.</summary>
+    Task<int> PurgeArchivedAsync(CancellationToken ct = default);
 }

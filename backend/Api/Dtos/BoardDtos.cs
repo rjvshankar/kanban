@@ -9,6 +9,8 @@ public sealed record BoardSummaryResponse(int Id, string Name, string Role, Date
 
 public sealed record ArchivedBoardResponse(int Id, string Name, DateTime DeletedAt, int DaysLeft);
 
+public sealed record PurgedBoardResponse(int Id, string Name, DateTime PurgedAt);
+
 public sealed record CardResponse(int Id, string Title, string? Description, DateOnly? DueDate, int Position);
 
 public sealed record ColumnResponse(int Id, string Name, int Position, List<CardResponse> Cards);

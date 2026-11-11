@@ -8,7 +8,7 @@ import ConfirmDialog from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { api } from '../api/client'
-import type { ArchivedBoard, BoardSummary } from '../api/types'
+import type { ArchivedBoard, BoardSummary, PurgedBoard } from '../api/types'
 import { useAuth } from '../auth/auth-context'
 
 // Board list screen.
@@ -21,6 +21,8 @@ export default function BoardListPage() {
   const [version, setVersion] = useState(0)
   // Deleted boards the user can still restore; empty until loaded.
   const [archived, setArchived] = useState<ArchivedBoard[]>([])
+  // Boards moved to the long-term archive that the user owned; restoring one returns it to `archived`.
+  const [purged, setPurged] = useState<PurgedBoard[]>([])
   // Form field: name of the board to create.
   const [name, setName] = useState('')
   // The board waiting for delete confirmation, or null.
@@ -38,6 +40,10 @@ export default function BoardListPage() {
       .get<ArchivedBoard[]>('/boards/archived')
       .then((a) => !cancelled && setArchived(a))
       .catch(() => {}) // the archive list is optional; the main list already reports load errors
+    api
+      .get<PurgedBoard[]>('/boards/purged')
+      .then((p) => !cancelled && setPurged(p))
+      .catch(() => {})
     return () => {
       cancelled = true
     }
@@ -78,6 +84,17 @@ export default function BoardListPage() {
       toast.error(err instanceof Error ? err.message : 'Could not restore board.')
       reload()
     }
+  }
+
+  // Moves a long-term-archived board back to Archived boards; the owner then restores it as usual.
+  async function onRestorePurged(b: PurgedBoard) {
+    try {
+      await api.post(`/boards/${b.id}/restore-purged`)
+      toast.success(`"${b.name}" moved to Archived boards. Restore it from there.`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not retrieve board.')
+    }
+    reload()
   }
 
   return (
@@ -123,7 +140,7 @@ export default function BoardListPage() {
         {archived.length > 0 && (
           <section className="mt-10">
             <h2 className="mb-1 text-lg font-semibold tracking-tight">Archived boards</h2>
-            <p className="mb-3 text-sm text-muted-foreground">Deleted boards are permanently removed after 30 days.</p>
+            <p className="mb-3 text-sm text-muted-foreground">Deleted boards move to the long-term archive after 30 days.</p>
             <ul className="grid gap-2">
               {archived.map((b) => (
                 <li key={b.id} className="flex items-center justify-between rounded-lg border bg-card px-4 py-3">
@@ -134,6 +151,24 @@ export default function BoardListPage() {
                     </p>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => void onRestore(b)}><RotateCcw /> Restore</Button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {purged.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-1 text-lg font-semibold tracking-tight">Long-term archive</h2>
+            <p className="mb-3 text-sm text-muted-foreground">Retrieve a board to move it back to Archived boards, then restore it there.</p>
+            <ul className="grid gap-2">
+              {purged.map((b) => (
+                <li key={b.id} className="flex items-center justify-between rounded-lg border bg-card px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-muted-foreground">{b.name}</p>
+                    <p className="text-xs text-muted-foreground">Archived {new Date(b.purgedAt).toLocaleDateString()}</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => void onRestorePurged(b)}><RotateCcw /> Retrieve</Button>
                 </li>
               ))}
             </ul>
