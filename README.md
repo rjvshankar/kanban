@@ -1,8 +1,10 @@
 # Kanban
 
+[![CI](https://github.com/rjvshankar/kanban/actions/workflows/ci.yml/badge.svg)](https://github.com/rjvshankar/kanban/actions/workflows/ci.yml)
+
 A mini Trello-style Kanban board built with ASP.NET Core, SQL Server and React.
 
-**Status:** in development. Accounts, boards, columns, cards, drag and drop, real-time updates, board members with roles and archived-board restore all work locally; the daily purge job and long-term archive are done, and the test suite is being built, backend integration tests first (see [Roadmap](#roadmap)).
+**Status:** in development. Accounts, boards, columns, cards, drag and drop, real-time updates, board members with roles and archived-board restore all work locally; the daily purge job and long-term archive are done, and the full test suite (backend, frontend and end-to-end) runs in CI on every pull request (see [Roadmap](#roadmap)).
 
 ## Features
 
@@ -163,7 +165,11 @@ KEEP_E2E_STACK=1 npm test                          # keep the containers after t
 
 51 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates between two browsers, and the archive, purge and restore lifecycle (with the 30 days simulated in SQL).
 
-Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (done) → end-to-end regression (done) → CI (GitHub Actions) with coverage reporting.
+Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (done) → end-to-end regression (done) → CI (done).
+
+### Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every pull request and on pushes to `main`. Three jobs run in parallel: **backend** (unit and integration tests with coverage), **frontend** (lint, type-check and build, tests with coverage) and **e2e** (the Playwright suite against the full stack). Coverage figures show in each job's summary and the full reports (plus the Playwright report and traces on failures) are downloadable artifacts. A newer push to the same branch cancels the run in progress.
 
 ## Database migrations
 
@@ -220,14 +226,11 @@ Done:
 - [x] Board member management with owner/editor/viewer roles
 - [x] Archived-board restore (30-day window)
 - [x] Daily purge job and long-term archive with restore
-
-Up next:
-
 - [x] Backend integration tests (xUnit, Testcontainers, Respawn)
 - [x] Backend unit tests (NSubstitute)
 - [x] Frontend tests (Vitest, React Testing Library, MSW)
 - [x] End-to-end regression tests (Playwright)
-- [ ] CI pipeline (GitHub Actions) and coverage reporting
+- [x] CI pipeline (GitHub Actions) and coverage reporting
 
 Later:
 

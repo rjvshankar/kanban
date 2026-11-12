@@ -1,0 +1,174 @@
+# CI: runs every test layer on each push to main and on every pull request.
+#   backend  - xUnit unit + integration tests (integration tests start SQL Server via Testcontainers)
+#   frontend - lint, type-check/build, Vitest
+#   e2e      - Playwright against the real stack (API + Vite + SQL Server + Mailpit)
+# The three jobs are independent and run in parallel. Make them required checks in the branch protection settings.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same PR/branch cancels the older run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # The Docker daemon on the runner is what Testcontainers uses for the SQL Server container.
+      - name: Test with coverage
+        run: >
+          dotnet test
+          --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml
+          --results-directory TestResults
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          python3 - >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import os, xml.etree.ElementTree as ET
+          path = 'TestResults/coverage.cobertura.xml'
+          if not os.path.exists(path):
+              print('### Backend coverage\n\nNo coverage file was produced.')
+          else:
+              root = ET.parse(path).getroot()
+              print('### Backend coverage\n')
+              print(f"Lines: **{float(root.attrib['line-rate']) * 100:.1f}%**, branches: **{float(root.attrib.get('branch-rate', 0)) * 100:.1f}%**")
+          PY
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/TestResults
+          if-no-files-found: ignore
+          retention-days: 14
+
+  frontend:
+    name: Frontend lint, build and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check and build
+        run: npm run build
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          node -e "
+            const fs = require('fs');
+            if (!fs.existsSync('coverage/coverage-summary.json')) { console.log('### Frontend coverage\n\nNo coverage file was produced.'); process.exit(0); }
+            const t = require('./coverage/coverage-summary.json').total;
+            console.log('### Frontend coverage\n');
+            console.log('Lines: **' + t.lines.pct + '%**, statements: **' + t.statements.pct + '%**, branches: **' + t.branches.pct + '%**, functions: **' + t.functions.pct + '%**');
+          " >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
+          if-no-files-found: ignore
+          retention-days: 14
+
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          npm ci --prefix frontend
+          npm ci --prefix e2e
+
+      # Playwright starts the stack itself (docker compose, the API, Vite); building first keeps its start-up timeout safe.
+      - name: Build the API
+        run: dotnet build backend/Api --configuration Debug
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: Run Playwright tests
+        run: npm test
+        working-directory: e2e
+        env:
+          CI: true
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: ignore
+          retention-days: 14

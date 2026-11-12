@@ -47,6 +47,7 @@ export default defineConfig({
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,
       stdout: 'ignore', // Vite echoes browser console errors (e.g. SignalR stopping on navigation); not useful here
+      stderr: 'ignore',
       env: { VITE_API_URL: env.apiUrl },
     },
   ],

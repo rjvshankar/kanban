@@ -23,7 +23,7 @@ export default defineConfig({
     environmentOptions: { jsdom: { url: 'http://localhost:3000' } }, // base for relative URLs; MSW handlers use this origin
     setupFiles: ['./src/test/setup.ts'],
     css: false,
-    coverage: { provider: 'v8', include: ['src/**/*.{ts,tsx}'], exclude: ['src/components/ui/**', 'src/test/**', 'src/**/*.test.{ts,tsx}', 'src/main.tsx'] },
+    coverage: { provider: 'v8', reporter: ['text', 'html', 'json-summary'], include: ['src/**/*.{ts,tsx}'], exclude: ['src/components/ui/**', 'src/test/**', 'src/**/*.test.{ts,tsx}', 'src/main.tsx'] },
   },
   server: {
     proxy: {

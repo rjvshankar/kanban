@@ -24,12 +24,8 @@ Mini Trello-style Kanban board.
 Done: JWT auth, boards/columns/cards CRUD, drag and drop (dnd-kit), real-time board updates (SignalR hub `/hubs/board`, "BoardChanged" ping then refetch).
 Also done: board member management (roles owner/editor/viewer; only owners manage columns, board settings and members; editors do cards; viewers read-only), archived-board restore (owners, within 30 days).
 Also done: daily purge job (stored proc `PurgeArchivedBoards` called by `ArchivePurgeService`; boards archived >30 days move to `Deleted*` tables) and restore from the long-term archive (`RestorePurgedBoard`: purged -> archived -> owner restores as usual).
-Next: testing, in this order (full suite: backend, frontend, unit, end-to-end regression):
-1. Backend integration tests (xUnit v3 + Testcontainers MSSQL + WebApplicationFactory + Respawn + Shouldly): DONE, scaffolded in `backend/Api.Tests` (61 tests: auth, password reset, boards, roles matrix, members, cards, archive/purge/restore, SignalR).
-2. Backend unit tests (NSubstitute): DONE, `Api.Tests/Unit` (87 tests: role rules, claims, JWT, SignalR notifier, purge service, controllers with mocked repos). Gapped-position renumbering (`SiblingOrder`) is DB logic, so it is covered by `Integration/OrderingTests.cs`. Total: 153 tests.
-3. Frontend: Vitest + React Testing Library + MSW: DONE, 132 tests in `frontend/src/**/*.test.ts(x)` (api client, auth provider and route guards, realtime hook with a fake SignalR connection, all pages and dialogs, App routing). Drag-and-drop and browser-only validation (e.g. `minLength`) are NOT testable in jsdom; they belong to the Playwright step.
-4. End-to-end regression (Playwright against the real stack): DONE, `e2e/` (51 tests: auth, password reset via Mailpit, boards, columns/cards, real mouse drag and drop, roles enforced in UI and API, member management, two-browser live updates, archive/purge/restore with SQL time travel).
-5. CI: GitHub Actions running backend, frontend and Playwright jobs per PR; coverage via Coverlet / Vitest v8 (tracked, no threshold yet).
+Also done: full test suite and CI. Backend integration + unit tests (153), frontend tests (133), Playwright e2e (51), and the GitHub Actions workflow `.github/workflows/ci.yml` (see Testing and CI below).
+Next: nothing scheduled.
 
 ## Later (decided to do later)
 - Live updates on the board list page (new/renamed/deleted boards appear without a refresh).
@@ -48,6 +44,13 @@ Next: testing, in this order (full suite: backend, frontend, unit, end-to-end re
 - `dbo.PurgeArchivedBoards @RetentionDays`: batched, moves board + members + columns + cards (incl. already soft-deleted ones). `ArchivePurgeService` runs it at startup and every 24h with `ArchivePolicy.RetentionDays` (`Models/BoardRole.cs`).
 - `dbo.RestorePurgedBoard @BoardId, @UserId`: only someone who was an owner at purge time; re-inserts with IDENTITY_INSERT as an ARCHIVED board (fresh 30-day window) and removes the Deleted* rows. API: `GET /api/boards/purged`, `POST /api/boards/{id}/restore-purged`.
 - **Any migration that adds/changes a column on Boards, Columns, Cards or BoardMembers must also change the matching `Deleted*` table and recreate both procs (`CREATE OR ALTER`, explicit column lists).**
+
+## CI (GitHub Actions)
+- `.github/workflows/ci.yml` runs on pushes to `main` and on every PR, as three parallel jobs: `backend` (`dotnet test` with Cobertura coverage; Testcontainers uses the runner's Docker), `frontend` (`npm ci`, lint, build, `test:coverage`), `e2e` (Playwright with `CI=true`: 2 workers, GitHub reporter; HTML report + traces uploaded as an artifact).
+- Coverage percentages appear in each job's summary; full reports are artifacts (14 days). No coverage threshold is enforced yet.
+- Newer pushes to the same PR cancel the older run (`concurrency`).
+- Branch protection (making the three jobs required checks) is a GitHub repo setting, not code.
+- Locally validated only (YAML parses, every command and summary snippet runs, `CI=true npx playwright test` passes); the first real run happens on GitHub.
 
 ## Testing
 - `backend/Kanban.slnx` holds `Api` and `Api.Tests`. `Program.cs` ends with `public partial class Program;` so `WebApplicationFactory<Program>` works.
