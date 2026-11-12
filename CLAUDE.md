@@ -24,7 +24,7 @@ Also done: board member management (roles owner/editor/viewer; only owners manag
 Also done: daily purge job (stored proc `PurgeArchivedBoards` called by `ArchivePurgeService`; boards archived >30 days move to `Deleted*` tables) and restore from the long-term archive (`RestorePurgedBoard`: purged -> archived -> owner restores as usual).
 Next: testing, in this order (full suite: backend, frontend, unit, end-to-end regression):
 1. Backend integration tests (xUnit v3 + Testcontainers MSSQL + WebApplicationFactory + Respawn + Shouldly): DONE, scaffolded in `backend/Api.Tests` (61 tests: auth, password reset, boards, roles matrix, members, cards, archive/purge/restore, SignalR).
-2. Backend unit tests (NSubstitute) for logic-heavy services.
+2. Backend unit tests (NSubstitute): DONE, `Api.Tests/Unit` (87 tests: role rules, claims, JWT, SignalR notifier, purge service, controllers with mocked repos). Gapped-position renumbering (`SiblingOrder`) is DB logic, so it is covered by `Integration/OrderingTests.cs`. Total: 153 tests.
 3. Frontend: Vitest + React Testing Library + MSW (dnd-kit drag-and-drop is covered in E2E, not jsdom).
 4. End-to-end regression: Playwright against the real stack (`e2e/`; dedicated test DB, Mailpit API for reset emails, two browser contexts for real-time/roles).
 5. CI: GitHub Actions running backend, frontend and Playwright jobs per PR; coverage via Coverlet / Vitest v8 (tracked, no threshold yet).
@@ -51,6 +51,8 @@ Next: testing, in this order (full suite: backend, frontend, unit, end-to-end re
 - `backend/Kanban.slnx` holds `Api` and `Api.Tests`. `Program.cs` ends with `public partial class Program;` so `WebApplicationFactory<Program>` works.
 - `Api.Tests/Infrastructure`: `ApiFixture` (one MSSQL container per run, Respawn reset before each test, DbUp journal `SchemaVersions` kept), `ApiFactory` (real app, only `IEmailSender` swapped for `FakeEmailSender`), `IntegrationTest` base (`NewUserAsync`, `CreateBoardAsync`, etc.).
 - Config reaches the app via environment variables (`ConnectionStrings__Default`, `Jwt__Key`, `Smtp__*`) set before the host starts, because `Program.cs` reads config eagerly.
+- Unit tests (`Unit/`) need no Docker or DB; they mock repositories with NSubstitute and call controllers directly via `AsUser(userId)` (`ControllerTestHelpers`). Integration tests (`Integration/`) use the real stack.
+- Keep `xUnit1051` enabled: pass `TestContext.Current.CancellationToken` to every async call in tests.
 - Tests share one DB, so they run serially (single xUnit collection). Tests touching the in-memory rate limiter use `CreateIsolatedFactory()` for fresh counters.
 - SignalR tests use long polling over the TestServer with the login cookie in a `Cookie` header.
 - New migrations/features: add integration tests alongside; changes to Boards/Columns/Cards/BoardMembers need purge/restore test coverage.

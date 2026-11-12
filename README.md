@@ -134,9 +134,12 @@ Backend integration tests live in `backend/Api.Tests` (xUnit v3, Shouldly, Testc
 cd backend/Api.Tests && dotnet run      # or: cd backend && dotnet test
 ```
 
-Covered so far: registration and login, password reset (including rate limiting), boards, the owner/editor/viewer permission matrix, member management, cards, archive, purge and restore, and SignalR board pings.
+153 tests in two groups:
 
-Test plan, in order: backend integration (done) → backend unit tests (NSubstitute) → frontend (Vitest, React Testing Library, MSW) → end-to-end regression (Playwright) → CI (GitHub Actions) with coverage reporting.
+- **Integration** (`Integration/`, real API + SQL Server): registration and login, password reset (including rate limiting), boards, the owner/editor/viewer permission matrix, member management, cards, card and column ordering (including position renumbering), archive, purge and restore, and SignalR board pings.
+- **Unit** (`Unit/`, no Docker needed, repositories mocked): role rules, claim parsing, JWT creation and validation, the SignalR notifier, the purge background service, and the auth, password reset, boards, columns and cards controllers.
+
+Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (Vitest, React Testing Library, MSW) → end-to-end regression (Playwright) → CI (GitHub Actions) with coverage reporting.
 
 ## Database migrations
 
@@ -154,7 +157,7 @@ Current scripts: `0001` users, `0002` password reset tokens, `0003` boards, boar
 kanban/
 ├── backend/
 │   ├── Kanban.slnx
-│   ├── Api.Tests/         Integration tests (xUnit, Testcontainers); Infrastructure/ holds fixtures
+│   ├── Api.Tests/         Integration/ and Unit/ tests (xUnit); Infrastructure/ holds fixtures
 │   └── Api/
 │       ├── Controllers/   Auth, password reset, boards, board members, columns, cards
 │       ├── Data/          Connection factory, repositories, ordering logic, migration runner
@@ -195,7 +198,7 @@ Done:
 Up next:
 
 - [x] Backend integration tests (xUnit, Testcontainers, Respawn)
-- [ ] Backend unit tests
+- [x] Backend unit tests (NSubstitute)
 - [ ] Frontend tests (Vitest, React Testing Library, MSW)
 - [ ] End-to-end regression tests (Playwright)
 - [ ] CI pipeline (GitHub Actions) and coverage reporting
