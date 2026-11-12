@@ -1,0 +1,19 @@
+# Isolated stack for the end-to-end tests. Different ports and volumes-free, so it never touches the dev
+# containers (kanban-db on 1433, kanban-mailpit on 1025/8025). `npm run down` removes it.
+name: kanban-e2e
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "E2e_Passw0rd!"
+    ports: ["14330:1433"]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+  mailpit:
+    image: axllent/mailpit
+    ports: ["1026:1025", "8026:8025"]

@@ -19,8 +19,11 @@ export function ProtectedRoute() {
 // Keeps logged-in users away from /login, /register, etc.
 export function GuestRoute() {
   const { user, loading } = useAuth()
+  // ProtectedRoute leaves the page the user wanted in `from`. Logging in flips `user` right here, before the login
+  // page's own navigate() can run, so this redirect is what actually takes the user back to that page.
+  const from = (useLocation().state as { from?: string } | null)?.from
 
   if (loading) return <p className="p-6 text-sm text-muted-foreground">Loading...</p>
-  if (user) return <Navigate to="/" replace />
+  if (user) return <Navigate to={from ?? '/'} replace />
   return <Outlet />
 }

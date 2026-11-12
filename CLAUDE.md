@@ -16,6 +16,7 @@ Mini Trello-style Kanban board.
 - `docker start kanban-db kanban-mailpit` (Mailpit: fake SMTP on 1025, inbox UI at http://localhost:8025)
 - `cd backend/Api && dotnet run` (http://localhost:5047)
 - `cd frontend && npm run dev` (http://localhost:5173)
+- E2E tests: `cd e2e && npm test` (first time: `npm install && npx playwright install chromium`). Starts its own isolated stack (SQL Server 14330, Mailpit 1026/8026, API 5147, Vite 5273) and never touches the dev containers; `npm run down` removes the containers. ~30s.
 - Frontend tests: `cd frontend && npm test` (watch: `npm run test:watch`, coverage: `npm run test:coverage`). No backend or Docker needed.
 - Backend tests: `cd backend/Api.Tests && dotnet run` (or `dotnet test` from `backend/`). Needs Docker running; starts its own throwaway SQL Server container (does not touch `kanban-db`). ~25s.
 
@@ -27,7 +28,7 @@ Next: testing, in this order (full suite: backend, frontend, unit, end-to-end re
 1. Backend integration tests (xUnit v3 + Testcontainers MSSQL + WebApplicationFactory + Respawn + Shouldly): DONE, scaffolded in `backend/Api.Tests` (61 tests: auth, password reset, boards, roles matrix, members, cards, archive/purge/restore, SignalR).
 2. Backend unit tests (NSubstitute): DONE, `Api.Tests/Unit` (87 tests: role rules, claims, JWT, SignalR notifier, purge service, controllers with mocked repos). Gapped-position renumbering (`SiblingOrder`) is DB logic, so it is covered by `Integration/OrderingTests.cs`. Total: 153 tests.
 3. Frontend: Vitest + React Testing Library + MSW: DONE, 132 tests in `frontend/src/**/*.test.ts(x)` (api client, auth provider and route guards, realtime hook with a fake SignalR connection, all pages and dialogs, App routing). Drag-and-drop and browser-only validation (e.g. `minLength`) are NOT testable in jsdom; they belong to the Playwright step.
-4. End-to-end regression: Playwright against the real stack (`e2e/`; dedicated test DB, Mailpit API for reset emails, two browser contexts for real-time/roles).
+4. End-to-end regression (Playwright against the real stack): DONE, `e2e/` (51 tests: auth, password reset via Mailpit, boards, columns/cards, real mouse drag and drop, roles enforced in UI and API, member management, two-browser live updates, archive/purge/restore with SQL time travel).
 5. CI: GitHub Actions running backend, frontend and Playwright jobs per PR; coverage via Coverlet / Vitest v8 (tracked, no threshold yet).
 
 ## Later (decided to do later)
@@ -64,6 +65,14 @@ Next: testing, in this order (full suite: backend, frontend, unit, end-to-end re
 - `renderWithProviders(ui, { route, path, user, auth })` gives a MemoryRouter plus a fake auth context; `locationOf()` asserts redirects; `makeBoard(role)` builds board fixtures.
 - Mock `sonner` (`toast`) and `useBoardRealtime` per test file; the SignalR hook itself is tested against a fake connection.
 - Do not wrap a rejecting call in RTL `act()` (state updates are not flushed); call it directly and `waitFor` the result.
+
+## E2E testing
+- `e2e/playwright.config.ts` boots everything via `webServer`: `docker compose up --wait` (`e2e/docker-compose.yml`) then `dotnet run` on :5147 (env vars supply connection string, JWT key, SMTP, `App__FrontendUrl`), plus Vite on :5273 with `VITE_API_URL` (the proxy target in `vite.config.ts` is now overridable).
+- Tests isolate themselves with unique users/boards instead of resetting the DB. Set-up goes through the API (`e2e/helpers/api.ts`, e.g. `seedBoard`, `signUpAndLogin`); the UI is used for what is being tested. Reset emails are read from the Mailpit API (`helpers/mailpit.ts`); purge time travel uses `sqlcmd` in the container (`helpers/db.ts`).
+- **Forgot-password is rate limited (3 per IP per 15 min, in the API's memory).** Password-reset specs make exactly 2 such requests; the API is therefore started fresh every run (`reuseExistingServer: false`) and retries are off. Don't add more forgot-password calls without raising this.
+- Drag and drop: use `drag()` from `helpers/board.ts`. It grabs near the card's top edge, aims at the target's original box within a column (dnd-kit decides the hovered item from original layout, items only shift visually) and re-measures when entering another column (the board inserts the card, which moves layout), and it waits for the move request to finish. The board shows a drop instantly, before the server saved it, so a test that reloads right after a drop must wait for the save (that race caused all the early flakiness).
+- dnd-kit gives cards `role="button"` (use `section ul > li`, not `listitem`) and `aria-disabled="true"` for viewers (use `click({ force: true })`).
+- Real bug found by E2E: `GuestRoute` redirected to `/` after login, ignoring the remembered `from`; fixed (and unit tested).
 
 ## Notes
 - Users table exists (migration 0001).

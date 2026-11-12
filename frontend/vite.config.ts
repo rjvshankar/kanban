@@ -6,6 +6,9 @@ import react from '@vitejs/plugin-react'
 import path from 'node:path'
 import { defineConfig } from 'vitest/config'
 
+// The API address the dev proxy forwards to. Overridable so the end-to-end tests can run their own API on another port.
+const apiUrl = process.env.VITE_API_URL ?? 'http://localhost:5047'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -24,9 +27,9 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:5047',
+      '/api': apiUrl,
       // SignalR live updates; ws: true lets the WebSocket upgrade pass through the proxy.
-      '/hubs': { target: 'http://localhost:5047', ws: true },
+      '/hubs': { target: apiUrl, ws: true },
     },
   },
 })

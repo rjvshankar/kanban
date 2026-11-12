@@ -149,7 +149,20 @@ npm run test:coverage                # coverage report
 
 132 tests cover the API client (errors, 401 handling), the auth provider and route guards, the SignalR hook (against a fake connection), every page (login, register, password reset, board list with archive and restore, board view with role-based controls, members dialog), the dialogs, and app routing. Drag and drop is left to the end-to-end suite because jsdom cannot simulate it.
 
-Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (done) → end-to-end regression (Playwright) → CI (GitHub Actions) with coverage reporting.
+End-to-end tests (Playwright) drive a real Chromium against the whole stack. They start their own isolated SQL Server, Mailpit, API and frontend on separate ports, so they run happily next to your dev setup and never touch your data:
+
+```bash
+cd e2e
+npm install && npx playwright install chromium     # first time only
+npm test                                           # run everything (~30s)
+npm run test:ui                                    # Playwright's interactive runner
+npm run report                                     # open the HTML report of the last run
+npm run down                                       # remove the e2e containers
+```
+
+51 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates between two browsers, and the archive, purge and restore lifecycle (with the 30 days simulated in SQL).
+
+Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (done) → end-to-end regression (done) → CI (GitHub Actions) with coverage reporting.
 
 ## Database migrations
 
@@ -177,6 +190,7 @@ kanban/
 │       ├── Models/        Entities and query row shapes
 │       ├── Services/      Tokens, email, rate limits, board change notifier, daily archive purge
 │       └── Program.cs     Service registration, startup, health endpoint
+├── e2e/                   Playwright end-to-end tests: specs in tests/, helpers/, docker-compose.yml for the isolated stack
 └── frontend/
     └── src/
         ├── api/           fetch wrapper and API types
@@ -211,7 +225,7 @@ Up next:
 - [x] Backend integration tests (xUnit, Testcontainers, Respawn)
 - [x] Backend unit tests (NSubstitute)
 - [x] Frontend tests (Vitest, React Testing Library, MSW)
-- [ ] End-to-end regression tests (Playwright)
+- [x] End-to-end regression tests (Playwright)
 - [ ] CI pipeline (GitHub Actions) and coverage reporting
 
 Later:

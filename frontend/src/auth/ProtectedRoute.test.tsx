@@ -5,7 +5,7 @@ import { ada, LocationProbe, locationOf } from '../test/utils'
 import { AuthContext, type User } from './auth-context'
 import { GuestRoute, ProtectedRoute } from './ProtectedRoute'
 
-function mount(route: string, user: User | null, loading = false) {
+function mount(route: string | { pathname: string; state?: unknown }, user: User | null, loading = false) {
   return render(
     <AuthContext.Provider value={{ user, loading, login: async () => {}, register: async () => {}, logout: async () => {} }}>
       <MemoryRouter initialEntries={[route]}>
@@ -48,6 +48,12 @@ describe('GuestRoute', () => {
     const { container } = mount('/login', ada)
     expect(screen.getByText('home')).toBeInTheDocument()
     expect(locationOf(container).path).toBe('/')
+  })
+
+  it('sends a user who just logged in back to the page they originally wanted', () => {
+    const { container } = mount({ pathname: '/login', state: { from: '/boards/7' } }, ada)
+    expect(screen.getByText('board')).toBeInTheDocument()
+    expect(locationOf(container).path).toBe('/boards/7')
   })
 
   it('waits while loading', () => {
