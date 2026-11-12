@@ -4,7 +4,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -14,6 +14,13 @@ export default defineConfig({
       // Lets code import from "@/components/..." instead of long relative paths.
       '@': path.resolve(import.meta.dirname, './src'),
     },
+  },
+  test: {
+    environment: 'jsdom',
+    environmentOptions: { jsdom: { url: 'http://localhost:3000' } }, // base for relative URLs; MSW handlers use this origin
+    setupFiles: ['./src/test/setup.ts'],
+    css: false,
+    coverage: { provider: 'v8', include: ['src/**/*.{ts,tsx}'], exclude: ['src/components/ui/**', 'src/test/**', 'src/**/*.test.{ts,tsx}', 'src/main.tsx'] },
   },
   server: {
     proxy: {

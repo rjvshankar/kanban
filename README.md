@@ -139,7 +139,17 @@ cd backend/Api.Tests && dotnet run      # or: cd backend && dotnet test
 - **Integration** (`Integration/`, real API + SQL Server): registration and login, password reset (including rate limiting), boards, the owner/editor/viewer permission matrix, member management, cards, card and column ordering (including position renumbering), archive, purge and restore, and SignalR board pings.
 - **Unit** (`Unit/`, no Docker needed, repositories mocked): role rules, claim parsing, JWT creation and validation, the SignalR notifier, the purge background service, and the auth, password reset, boards, columns and cards controllers.
 
-Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (Vitest, React Testing Library, MSW) → end-to-end regression (Playwright) → CI (GitHub Actions) with coverage reporting.
+Frontend tests use Vitest, React Testing Library and MSW (network-level API mocking) and need no backend:
+
+```bash
+cd frontend && npm test              # run once
+npm run test:watch                   # watch mode
+npm run test:coverage                # coverage report
+```
+
+132 tests cover the API client (errors, 401 handling), the auth provider and route guards, the SignalR hook (against a fake connection), every page (login, register, password reset, board list with archive and restore, board view with role-based controls, members dialog), the dialogs, and app routing. Drag and drop is left to the end-to-end suite because jsdom cannot simulate it.
+
+Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (done) → end-to-end regression (Playwright) → CI (GitHub Actions) with coverage reporting.
 
 ## Database migrations
 
@@ -173,6 +183,7 @@ kanban/
         ├── auth/          AuthProvider, useAuth, route guards
         ├── components/    shadcn/ui components and shared dialogs
         ├── lib/           Shared helpers, e.g. role descriptions
+        ├── test/          Vitest setup, MSW server and render helpers (tests sit next to the code)
         ├── pages/         Login, register, password reset, board list, board view, members dialog
         └── realtime/      SignalR hook for live board updates
 ```
@@ -199,7 +210,7 @@ Up next:
 
 - [x] Backend integration tests (xUnit, Testcontainers, Respawn)
 - [x] Backend unit tests (NSubstitute)
-- [ ] Frontend tests (Vitest, React Testing Library, MSW)
+- [x] Frontend tests (Vitest, React Testing Library, MSW)
 - [ ] End-to-end regression tests (Playwright)
 - [ ] CI pipeline (GitHub Actions) and coverage reporting
 

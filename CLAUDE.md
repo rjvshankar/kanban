@@ -16,6 +16,7 @@ Mini Trello-style Kanban board.
 - `docker start kanban-db kanban-mailpit` (Mailpit: fake SMTP on 1025, inbox UI at http://localhost:8025)
 - `cd backend/Api && dotnet run` (http://localhost:5047)
 - `cd frontend && npm run dev` (http://localhost:5173)
+- Frontend tests: `cd frontend && npm test` (watch: `npm run test:watch`, coverage: `npm run test:coverage`). No backend or Docker needed.
 - Backend tests: `cd backend/Api.Tests && dotnet run` (or `dotnet test` from `backend/`). Needs Docker running; starts its own throwaway SQL Server container (does not touch `kanban-db`). ~25s.
 
 ## Planned
@@ -25,7 +26,7 @@ Also done: daily purge job (stored proc `PurgeArchivedBoards` called by `Archive
 Next: testing, in this order (full suite: backend, frontend, unit, end-to-end regression):
 1. Backend integration tests (xUnit v3 + Testcontainers MSSQL + WebApplicationFactory + Respawn + Shouldly): DONE, scaffolded in `backend/Api.Tests` (61 tests: auth, password reset, boards, roles matrix, members, cards, archive/purge/restore, SignalR).
 2. Backend unit tests (NSubstitute): DONE, `Api.Tests/Unit` (87 tests: role rules, claims, JWT, SignalR notifier, purge service, controllers with mocked repos). Gapped-position renumbering (`SiblingOrder`) is DB logic, so it is covered by `Integration/OrderingTests.cs`. Total: 153 tests.
-3. Frontend: Vitest + React Testing Library + MSW (dnd-kit drag-and-drop is covered in E2E, not jsdom).
+3. Frontend: Vitest + React Testing Library + MSW: DONE, 132 tests in `frontend/src/**/*.test.ts(x)` (api client, auth provider and route guards, realtime hook with a fake SignalR connection, all pages and dialogs, App routing). Drag-and-drop and browser-only validation (e.g. `minLength`) are NOT testable in jsdom; they belong to the Playwright step.
 4. End-to-end regression: Playwright against the real stack (`e2e/`; dedicated test DB, Mailpit API for reset emails, two browser contexts for real-time/roles).
 5. CI: GitHub Actions running backend, frontend and Playwright jobs per PR; coverage via Coverlet / Vitest v8 (tracked, no threshold yet).
 
@@ -56,6 +57,13 @@ Next: testing, in this order (full suite: backend, frontend, unit, end-to-end re
 - Tests share one DB, so they run serially (single xUnit collection). Tests touching the in-memory rate limiter use `CreateIsolatedFactory()` for fresh counters.
 - SignalR tests use long polling over the TestServer with the login cookie in a `Cookie` header.
 - New migrations/features: add integration tests alongside; changes to Boards/Columns/Cards/BoardMembers need purge/restore test coverage.
+
+## Frontend testing
+- Vitest + jsdom, config in the `test` block of `vite.config.ts`; setup in `src/test/setup.ts`. Tests sit next to the code (`Foo.test.tsx`).
+- MSW intercepts `fetch` (`src/test/server.ts`); any request without a handler fails the test (`onUnhandledFrame: 'error'`). Handlers use absolute URLs via `url('/boards')` from `src/test/utils.tsx`. MSW 3 renamed `onUnhandledRequest` to `onUnhandledFrame`.
+- `renderWithProviders(ui, { route, path, user, auth })` gives a MemoryRouter plus a fake auth context; `locationOf()` asserts redirects; `makeBoard(role)` builds board fixtures.
+- Mock `sonner` (`toast`) and `useBoardRealtime` per test file; the SignalR hook itself is tested against a fake connection.
+- Do not wrap a rejecting call in RTL `act()` (state updates are not flushed); call it directly and `waitFor` the result.
 
 ## Notes
 - Users table exists (migration 0001).

@@ -20,6 +20,11 @@ export default defineConfig([
     },
   },
   {
+    // Test helpers export non-components, and probes capture context values during render.
+    files: ['src/test/**', 'src/**/*.test.{ts,tsx}'],
+    rules: { 'react-refresh/only-export-components': 'off', 'react-hooks/globals': 'off' },
+  },
+  {
     // shadcn's generated components also export helpers (e.g. buttonVariants); that's fine for Fast Refresh in practice.
     files: ['src/components/ui/**'],
     rules: { 'react-refresh/only-export-components': 'off' },
