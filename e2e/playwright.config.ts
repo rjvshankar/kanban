@@ -6,6 +6,7 @@ import { env } from './helpers/env'
 export default defineConfig({
   testDir: './tests',
   globalSetup: './global-setup.ts',
+  globalTeardown: './global-teardown.ts',
   fullyParallel: true,
   workers: process.env.CI ? 2 : 4,
   // No retries: the forgot-password rate limit (3 per IP per 15 minutes) would be used up by a retry.

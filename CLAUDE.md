@@ -16,7 +16,7 @@ Mini Trello-style Kanban board.
 - `docker start kanban-db kanban-mailpit` (Mailpit: fake SMTP on 1025, inbox UI at http://localhost:8025)
 - `cd backend/Api && dotnet run` (http://localhost:5047)
 - `cd frontend && npm run dev` (http://localhost:5173)
-- E2E tests: `cd e2e && npm test` (first time: `npm install && npx playwright install chromium`). Starts its own isolated stack (SQL Server 14330, Mailpit 1026/8026, API 5147, Vite 5273) and never touches the dev containers; `npm run down` removes the containers. ~30s.
+- E2E tests: `cd e2e && npm test` (first time: `npm install && npx playwright install chromium`). Starts its own isolated stack (SQL Server 14330, Mailpit 1026/8026, API 5147, Vite 5273) and never touches the dev containers. `global-teardown.ts` removes the e2e containers after each run; `KEEP_E2E_STACK=1` keeps them (faster re-runs), `npm run down` removes them by hand. ~30s (+15s SQL Server startup when the containers are fresh).
 - Frontend tests: `cd frontend && npm test` (watch: `npm run test:watch`, coverage: `npm run test:coverage`). No backend or Docker needed.
 - Backend tests: `cd backend/Api.Tests && dotnet run` (or `dotnet test` from `backend/`). Needs Docker running; starts its own throwaway SQL Server container (does not touch `kanban-db`). ~25s.
 

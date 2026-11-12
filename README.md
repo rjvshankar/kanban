@@ -149,7 +149,7 @@ npm run test:coverage                # coverage report
 
 132 tests cover the API client (errors, 401 handling), the auth provider and route guards, the SignalR hook (against a fake connection), every page (login, register, password reset, board list with archive and restore, board view with role-based controls, members dialog), the dialogs, and app routing. Drag and drop is left to the end-to-end suite because jsdom cannot simulate it.
 
-End-to-end tests (Playwright) drive a real Chromium against the whole stack. They start their own isolated SQL Server, Mailpit, API and frontend on separate ports, so they run happily next to your dev setup and never touch your data:
+End-to-end tests (Playwright) drive a real Chromium against the whole stack. They start their own isolated SQL Server, Mailpit, API and frontend on separate ports, so they run happily next to your dev setup and never touch your data. The containers are removed automatically when the run ends:
 
 ```bash
 cd e2e
@@ -157,7 +157,8 @@ npm install && npx playwright install chromium     # first time only
 npm test                                           # run everything (~30s)
 npm run test:ui                                    # Playwright's interactive runner
 npm run report                                     # open the HTML report of the last run
-npm run down                                       # remove the e2e containers
+npm run down                                       # remove the e2e containers by hand
+KEEP_E2E_STACK=1 npm test                          # keep the containers after the run (~15s faster next time)
 ```
 
 51 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates between two browsers, and the archive, purge and restore lifecycle (with the 30 days simulated in SQL).
