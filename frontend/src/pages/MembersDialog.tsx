@@ -58,7 +58,8 @@ export default function MembersDialog({ boardId, onChanged, onClose }: Props) {
 
   // Results only count while the term is long enough (stale ones from a longer term are hidden).
   const searching = term.trim().length >= 2
-  const shown = searching ? results : []
+  // Also drop anyone who is already a member: after an add, `members` updates before the debounced refetch lands.
+  const shown = searching ? results.filter((r) => !members?.some((m) => m.userId === r.userId)) : []
 
   // Runs a change, then refreshes the list and tells the board page.
   async function change(fn: () => Promise<unknown>) {
