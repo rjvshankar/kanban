@@ -103,3 +103,19 @@ test.describe('profile dialog', () => {
     await expect(page.locator('html')).toHaveClass(/dark/)
   })
 })
+
+test('the account menu stays in the same spot on the board list and on a board', async ({ page }) => {
+  await signUpAndLogin(page, 'Ada')
+  const id = await createBoard(page.request, 'Same spot')
+  const trigger = page.getByRole('button', { name: 'Account menu' })
+
+  await page.goto('/')
+  await expect(trigger).toBeVisible()
+  const onList = await trigger.boundingBox()
+
+  await page.goto(`/boards/${id}`)
+  await expect(page.getByRole('heading', { name: 'Same spot' })).toBeVisible()
+  const onBoard = await trigger.boundingBox()
+
+  expect(onBoard).toEqual(onList)
+})

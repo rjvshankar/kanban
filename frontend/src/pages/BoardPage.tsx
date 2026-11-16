@@ -324,7 +324,7 @@ export default function BoardPage() {
             <Button variant="outline" size="sm" onClick={() => setDialog({ kind: 'members' })}><Users /> Members</Button>
           )}
           <span className="text-xs capitalize text-muted-foreground">{board.role}</span>
-          <UserMenu showName={false} />
+          <UserMenu />
         </div>
       </header>
 

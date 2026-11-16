@@ -9,19 +9,16 @@ beforeEach(() => {
   document.documentElement.classList.remove('dark')
 })
 
-async function open(props: Parameters<typeof renderWithProviders>[1] = {}, showName = true) {
-  const result = renderWithProviders(<UserMenu showName={showName} />, props)
+async function open(props: Parameters<typeof renderWithProviders>[1] = {}) {
+  const result = renderWithProviders(<UserMenu />, props)
   await result.user.click(screen.getByRole('button', { name: 'Account menu' }))
   return result
 }
 
 describe('UserMenu', () => {
-  it('shows the first name on the trigger, or only the avatar with showName=false', () => {
-    const { unmount } = renderWithProviders(<UserMenu />)
+  it('shows the avatar and first name on the trigger', () => {
+    renderWithProviders(<UserMenu />)
     expect(screen.getByRole('button', { name: 'Account menu' })).toHaveTextContent('Ada')
-    unmount()
-    renderWithProviders(<UserMenu showName={false} />)
-    expect(screen.getByRole('button', { name: 'Account menu' })).not.toHaveTextContent('Ada')
   })
 
   it('lists who you are plus Edit profile, Dark mode and Log out', async () => {

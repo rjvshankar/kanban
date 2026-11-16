@@ -1,4 +1,4 @@
-// Header menu under the user's avatar: Edit profile (opens the profile dialog), the dark mode switch and Log out.
+// Header menu under the user's avatar and first name (same on every page so it never moves): Edit profile (opens the profile dialog), the dark mode switch and Log out.
 
 import { useState } from 'react'
 import { LogOut, UserPen } from 'lucide-react'
@@ -12,7 +12,7 @@ import {
 import { useTheme } from '@/theme/theme-context'
 import { useAuth } from '../auth/auth-context'
 
-export default function UserMenu({ showName = true }: { showName?: boolean }) {
+export default function UserMenu() {
   const { user, logout } = useAuth()
   const { theme, setTheme } = useTheme()
   // Whether the profile dialog is open (rendered only while open so its form state resets each time).
@@ -29,7 +29,7 @@ export default function UserMenu({ showName = true }: { showName?: boolean }) {
           className="flex items-center gap-2 rounded-full py-0.5 pr-2 pl-0.5 text-sm text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:bg-muted"
         >
           <UserAvatar user={user} />
-          {showName && user.firstName}
+          {user.firstName}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="font-normal">

@@ -165,7 +165,7 @@ npm run down                                       # remove the e2e containers b
 KEEP_E2E_STACK=1 npm test                          # keep the containers after the run (~15s faster next time)
 ```
 
-57 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates between two browsers, the archive, purge and restore lifecycle (with the 30 days simulated in SQL), and the profile dialog (name, photo upload and removal, dark mode persistence).
+58 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates between two browsers, the archive, purge and restore lifecycle (with the 30 days simulated in SQL), and the profile dialog (name, photo upload and removal, dark mode persistence).
 
 Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (done) → end-to-end regression (done) → CI (done).
 
