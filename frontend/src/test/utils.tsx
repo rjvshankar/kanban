@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import type { ReactElement } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
+import { ThemeProvider } from '../theme/ThemeProvider'
 import { AuthContext, type AuthContextValue, type User } from '../auth/auth-context'
 import type { Board, Role } from '../api/types'
 
@@ -44,6 +45,7 @@ export function renderWithProviders(ui: ReactElement, { route = '/', path = '*',
     ...auth,
   }
   const result = render(
+    <ThemeProvider>
     <AuthContext.Provider value={value}>
       <MemoryRouter initialEntries={[route]}>
         <Routes>
@@ -52,7 +54,8 @@ export function renderWithProviders(ui: ReactElement, { route = '/', path = '*',
         </Routes>
         <LocationProbe />
       </MemoryRouter>
-    </AuthContext.Provider>,
+    </AuthContext.Provider>
+    </ThemeProvider>,
   )
   return { ...result, user: userEvent.setup() }
 }

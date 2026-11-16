@@ -9,7 +9,7 @@ A mini Trello-style Kanban board built with ASP.NET Core, SQL Server and React.
 ## Features
 
 - **Accounts:** register, log in and out, and reset a forgotten password by email. The session is a JWT in an httpOnly cookie, so JavaScript never touches the token.
-- **Profile:** click your avatar in the header to change your first and last name, upload a profile picture (cropped and resized to 256×256 in the browser, stored in the database) and switch between light and dark mode. The theme is remembered per browser in a `kanban_theme` cookie and applied before first paint; until you choose, it follows your OS setting.
+- **Profile:** click your avatar in the header for a menu with **Edit profile** (first and last name, profile picture cropped and resized to 256×256 in the browser and stored in the database), a **Dark mode** switch and **Log out**. The theme is remembered per browser in a `kanban_theme` cookie and applied before first paint; until you choose, it follows your OS setting.
 - **Boards:** create, rename and delete boards. The creator becomes the board's owner.
 - **Members and roles:** owners add people to a board (search by name or email), change their role and remove them. A board always keeps at least one owner. The Members dialog has a legend of what each role can do:
 
@@ -38,7 +38,7 @@ A mini Trello-style Kanban board built with ASP.NET Core, SQL Server and React.
 | Email | MailKit; [Mailpit](https://mailpit.axllent.org/) as a local fake SMTP server |
 | Real-time | SignalR |
 | Frontend | React + TypeScript, built with Vite |
-| UI | Tailwind CSS v4 + [shadcn/ui](https://ui.shadcn.com/) (slate theme, light/dark mode via the profile dialog, defaulting to the OS setting) |
+| UI | Tailwind CSS v4 + [shadcn/ui](https://ui.shadcn.com/) (slate theme, light/dark mode via the user menu, defaulting to the OS setting) |
 | Routing / drag and drop | React Router, dnd-kit |
 
 ## Prerequisites
@@ -151,7 +151,7 @@ npm run test:watch                   # watch mode
 npm run test:coverage                # coverage report
 ```
 
-158 tests cover the API client (errors, 401 handling), the auth provider and route guards, the SignalR hook (against a fake connection), the theme provider (cookie, OS fallback), the profile dialog and photo cropper, every page (login, register, password reset, board list with archive and restore, board view with role-based controls, members dialog), the dialogs, and app routing. Drag and drop is left to the end-to-end suite because jsdom cannot simulate it.
+163 tests cover the API client (errors, 401 handling), the auth provider and route guards, the SignalR hook (against a fake connection), the theme provider (cookie, OS fallback), the user menu, the profile dialog and photo cropper, every page (login, register, password reset, board list with archive and restore, board view with role-based controls, members dialog), the dialogs, and app routing. Drag and drop is left to the end-to-end suite because jsdom cannot simulate it.
 
 End-to-end tests (Playwright) drive a real Chromium against the whole stack. They start their own isolated SQL Server, Mailpit, API and frontend on separate ports, so they run happily next to your dev setup and never touch your data. The containers are removed automatically when the run ends:
 
@@ -165,7 +165,7 @@ npm run down                                       # remove the e2e containers b
 KEEP_E2E_STACK=1 npm test                          # keep the containers after the run (~15s faster next time)
 ```
 
-56 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates between two browsers, the archive, purge and restore lifecycle (with the 30 days simulated in SQL), and the profile dialog (name, photo upload and removal, dark mode persistence).
+57 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates between two browsers, the archive, purge and restore lifecycle (with the 30 days simulated in SQL), and the profile dialog (name, photo upload and removal, dark mode persistence).
 
 Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (done) → end-to-end regression (done) → CI (done).
 
@@ -229,7 +229,7 @@ Done:
 - [x] Board member management with owner/editor/viewer roles
 - [x] Archived-board restore (30-day window)
 - [x] Daily purge job and long-term archive with restore
-- [x] Profile dialog: name, profile picture, dark/light mode
+- [x] User menu (edit profile, dark/light mode, log out) and profile dialog (name, profile picture)
 - [x] Backend integration tests (xUnit, Testcontainers, Respawn)
 - [x] Backend unit tests (NSubstitute)
 - [x] Frontend tests (Vitest, React Testing Library, MSW)

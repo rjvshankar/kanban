@@ -1,21 +1,18 @@
 // Home page: lists the boards you belong to, with create and delete (owner only).
 
 import { useEffect, useState, type FormEvent } from 'react'
-import { LogOut, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import ConfirmDialog from '@/components/ConfirmDialog'
-import ProfileButton from '@/components/ProfileButton'
+import UserMenu from '@/components/UserMenu'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { api } from '../api/client'
 import type { ArchivedBoard, BoardSummary, PurgedBoard } from '../api/types'
-import { useAuth } from '../auth/auth-context'
 
 // Board list screen.
 export default function BoardListPage() {
-  // The logout action (the greeting and profile live in ProfileButton).
-  const { logout } = useAuth()
   // The board list; null until the first load finishes.
   const [boards, setBoards] = useState<BoardSummary[] | null>(null)
   // Bumping this re-runs the load effect, which is how we refetch.
@@ -102,10 +99,7 @@ export default function BoardListPage() {
     <div className="min-h-screen bg-muted/30">
       <header className="flex items-center justify-between border-b bg-background px-4 py-3">
         <span className="font-semibold">Kanban</span>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <ProfileButton />
-          <Button variant="ghost" size="sm" onClick={() => void logout()}><LogOut /> Log out</Button>
-        </div>
+        <UserMenu />
       </header>
 
       <main className="mx-auto max-w-2xl p-4 pt-8">

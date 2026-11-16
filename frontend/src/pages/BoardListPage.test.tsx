@@ -70,7 +70,8 @@ describe('BoardListPage', () => {
     serve()
     const logout = vi.fn().mockResolvedValue(undefined)
     const { user } = mount({ logout })
-    await user.click(await screen.findByRole('button', { name: /log out/i }))
+    await user.click(await screen.findByRole('button', { name: 'Account menu' }))
+    await user.click(await screen.findByRole('menuitem', { name: /log out/i }))
     expect(logout).toHaveBeenCalled()
   })
 

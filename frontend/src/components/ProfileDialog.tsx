@@ -1,5 +1,5 @@
-// Profile dialog: change first/last name and profile picture, and switch between light and dark mode.
-// Theme applies instantly (it is a browser preference kept in a cookie); name and picture are saved with the Save button.
+// Profile dialog: change first/last name and profile picture, saved with the Save button.
+// (The light/dark switch lives in the user menu.)
 
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { toast } from 'sonner'
@@ -9,8 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { useTheme } from '@/theme/theme-context'
 import { api } from '../api/client'
 import { useAuth, type User } from '../auth/auth-context'
 
@@ -27,7 +25,6 @@ interface Props {
 // The parent renders it only while open, so state resets each time.
 export default function ProfileDialog({ user, onClose }: Props) {
   const { updateUser } = useAuth()
-  const { theme, setTheme } = useTheme()
   const fileInput = useRef<HTMLInputElement>(null)
   const [firstName, setFirstName] = useState(user.firstName)
   const [lastName, setLastName] = useState(user.lastName)
@@ -89,7 +86,7 @@ export default function ProfileDialog({ user, onClose }: Props) {
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{cropping ? 'Adjust photo' : 'Your profile'}</DialogTitle>
-          <DialogDescription className="sr-only">Edit your name, picture and appearance.</DialogDescription>
+          <DialogDescription className="sr-only">Edit your name and picture.</DialogDescription>
         </DialogHeader>
 
         {cropping ? (
@@ -121,11 +118,6 @@ export default function ProfileDialog({ user, onClose }: Props) {
             <div className="grid gap-1.5">
               <Label htmlFor="profile-email">Email</Label>
               <Input id="profile-email" value={user.email} readOnly disabled />
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-              <Label htmlFor="profile-dark">Dark mode</Label>
-              <Switch id="profile-dark" checked={theme === 'dark'} onCheckedChange={(on) => setTheme(on ? 'dark' : 'light')} />
             </div>
 
             <DialogFooter>

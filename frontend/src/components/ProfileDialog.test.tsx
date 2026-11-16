@@ -1,8 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { toast } from 'sonner'
-import { ThemeProvider } from '@/theme/ThemeProvider'
-import { THEME_COOKIE, readThemeCookie } from '@/theme/theme'
 import { server } from '../test/server'
 import { ada, http, HttpResponse, renderWithProviders, url } from '../test/utils'
 import ProfileDialog from './ProfileDialog'
@@ -18,7 +16,7 @@ vi.mock('../lib/avatarCrop', async (orig) => ({
 function mount(user = ada, auth = {}) {
   const onClose = vi.fn()
   const updateUser = vi.fn()
-  const result = renderWithProviders(<ThemeProvider><ProfileDialog user={user} onClose={onClose} /></ThemeProvider>, { auth: { updateUser, ...auth } })
+  const result = renderWithProviders(<ProfileDialog user={user} onClose={onClose} />, { auth: { updateUser, ...auth } })
   return { ...result, onClose, updateUser }
 }
 
@@ -36,8 +34,6 @@ async function pickPhoto(file = new File(['x'], 'me.png', { type: 'image/png' })
 }
 
 beforeEach(() => {
-  document.cookie = `${THEME_COOKIE}=; Path=/; Max-Age=0`
-  document.documentElement.classList.remove('dark')
   URL.createObjectURL = vi.fn(() => 'blob:preview')
   URL.revokeObjectURL = vi.fn()
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
@@ -143,21 +139,6 @@ describe('ProfileDialog', () => {
   it('has no Remove button when there is no picture', () => {
     mount()
     expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument()
-  })
-
-  it('dark mode switch applies instantly and saves the cookie, with no API call', async () => {
-    const { user } = mount()
-    const toggle = screen.getByRole('switch', { name: 'Dark mode' })
-    expect(toggle).not.toBeChecked()
-
-    await user.click(toggle)
-    expect(toggle).toBeChecked()
-    expect(document.documentElement).toHaveClass('dark')
-    expect(readThemeCookie()).toBe('dark')
-
-    await user.click(toggle)
-    expect(document.documentElement).not.toHaveClass('dark')
-    expect(readThemeCookie()).toBe('light')
   })
 
   it('Cancel closes without saving', async () => {
