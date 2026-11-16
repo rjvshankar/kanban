@@ -34,13 +34,14 @@ public sealed class ProfileTests(ApiFixture fixture) : IntegrationTest(fixture)
     {
         var u = await NewUserAsync();
 
-        var res = await u.Client.PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest("  Grace ", " Hopper "), Ct);
+        var res = await u.Client.PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest("  Grace ", " Hopper ", " 555-1234 "), Ct);
 
         res.StatusCode.ShouldBe(HttpStatusCode.OK);
         var me = await JsonOf(await u.Client.GetAsync("/api/auth/me", Ct));
         me.GetProperty("firstName").GetString().ShouldBe("Grace");
         me.GetProperty("lastName").GetString().ShouldBe("Hopper");
         me.GetProperty("email").GetString().ShouldBe(u.Email);
+        me.GetProperty("phoneNumber").GetString().ShouldBe("555-1234");
     }
 
     [Theory]
@@ -50,22 +51,54 @@ public sealed class ProfileTests(ApiFixture fixture) : IntegrationTest(fixture)
     public async Task Update_name_rejects_blank(string first, string last)
     {
         var u = await NewUserAsync();
-        (await u.Client.PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest(first, last), Ct)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await u.Client.PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest(first, last, null), Ct)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Update_name_rejects_too_long()
     {
         var u = await NewUserAsync();
-        var res = await u.Client.PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest(new string('a', 101), "B"), Ct);
+        var res = await u.Client.PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest(new string('a', 101), "B", null), Ct);
         res.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Update_name_requires_login()
     {
-        var res = await Factory.CreateClient().PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest("A", "B"), Ct);
+        var res = await Factory.CreateClient().PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest("A", "B", null), Ct);
         res.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Update_phone_can_be_changed_and_cleared()
+    {
+        var u = await NewUserAsync();
+        (await JsonOf(await u.Client.GetAsync("/api/auth/me", Ct))).GetProperty("phoneNumber").ValueKind.ShouldBe(JsonValueKind.Null);
+
+        await u.Client.PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest("A", "B", "+1 (555) 123-4567"), Ct);
+        (await JsonOf(await u.Client.GetAsync("/api/auth/me", Ct))).GetProperty("phoneNumber").GetString().ShouldBe("+1 (555) 123-4567");
+
+        await u.Client.PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest("A", "B", null), Ct);
+        (await JsonOf(await u.Client.GetAsync("/api/auth/me", Ct))).GetProperty("phoneNumber").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    [Theory]
+    [InlineData("not a phone")]
+    [InlineData("1234567890123456789012345678901")] // 31 characters
+    public async Task Update_phone_rejects_invalid_values(string phone)
+    {
+        var u = await NewUserAsync();
+        var res = await u.Client.PutAsJsonAsync("/api/auth/me", new UpdateProfileRequest("A", "B", phone), Ct);
+        res.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Registration_phone_shows_up_in_me()
+    {
+        var client = Factory.CreateClient();
+        await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest("A", "B", "phone@example.com", "555-0000", "Password123!"), Ct);
+        await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("phone@example.com", "Password123!"), Ct);
+        (await JsonOf(await client.GetAsync("/api/auth/me", Ct))).GetProperty("phoneNumber").GetString().ShouldBe("555-0000");
     }
 
     // ---- avatar ----

@@ -9,7 +9,7 @@ A mini Trello-style Kanban board built with ASP.NET Core, SQL Server and React.
 ## Features
 
 - **Accounts:** register, log in and out, and reset a forgotten password by email. The session is a JWT in an httpOnly cookie, so JavaScript never touches the token.
-- **Profile:** click your avatar in the header for a menu with **Edit profile** (first and last name, profile picture cropped and resized to 256×256 in the browser and stored in the database), a **Dark mode** switch and **Log out**. The theme is remembered per browser in a `kanban_theme` cookie and applied before first paint; until you choose, it follows your OS setting.
+- **Profile:** click your avatar in the header for a menu with **Edit profile** (first and last name, optional phone number, profile picture cropped and resized to 256×256 in the browser and stored in the database), a **Dark mode** switch and **Log out**. The theme is remembered per browser in a `kanban_theme` cookie and applied before first paint; until you choose, it follows your OS setting.
 - **Boards:** create, rename and delete boards. The creator becomes the board's owner.
 - **Members and roles:** owners add people to a board (search by name or email), change their role and remove them. A board always keeps at least one owner. The Members dialog has a legend of what each role can do:
 
@@ -111,7 +111,7 @@ All endpoints except the auth ones require login. `Api/Api.http` has ready-made 
 
 | Area | Endpoints |
 |---|---|
-| Auth | `POST /api/auth/register`, `login`, `logout`, `forgot-password`, `reset-password`; `GET/PUT /api/auth/me` (PUT updates first and last name) |
+| Auth | `POST /api/auth/register`, `login`, `logout`, `forgot-password`, `reset-password`; `GET/PUT /api/auth/me` (PUT replaces first name, last name and optional phone number; blank clears the phone) |
 | Profile picture | `PUT/DELETE /api/auth/me/avatar` (multipart `file`; PNG, JPEG or WebP, 2 MB max, type checked from the bytes); `GET /api/users/{id}/avatar` (any logged-in user) |
 | Boards | `GET/POST /api/boards`; `GET/PATCH/DELETE /api/boards/{id}` (GET returns columns with their cards) |
 | Members (owner only) | `GET/POST /api/boards/{id}/members`; `PATCH/DELETE /api/boards/{id}/members/{userId}`; `GET /api/boards/{id}/members/candidates?q=` (user search, 2+ characters) |
@@ -138,7 +138,7 @@ Backend integration tests live in `backend/Api.Tests` (xUnit v3, Shouldly, Testc
 cd backend/Api.Tests && dotnet run      # or: cd backend && dotnet test
 ```
 
-175 tests in two groups:
+182 tests in two groups:
 
 - **Integration** (`Integration/`, real API + SQL Server): registration and login, password reset (including rate limiting), profile name and avatar upload rules, boards, the owner/editor/viewer permission matrix, member management, cards, card and column ordering (including position renumbering), archive, purge and restore, and SignalR board pings.
 - **Unit** (`Unit/`, no Docker needed, repositories mocked): role rules, claim parsing, JWT creation and validation, the SignalR notifier, the purge background service, and the auth, password reset, boards, columns and cards controllers.
@@ -151,7 +151,7 @@ npm run test:watch                   # watch mode
 npm run test:coverage                # coverage report
 ```
 
-163 tests cover the API client (errors, 401 handling), the auth provider and route guards, the SignalR hook (against a fake connection), the theme provider (cookie, OS fallback), the user menu, the profile dialog and photo cropper, every page (login, register, password reset, board list with archive and restore, board view with role-based controls, members dialog), the dialogs, and app routing. Drag and drop is left to the end-to-end suite because jsdom cannot simulate it.
+165 tests cover the API client (errors, 401 handling), the auth provider and route guards, the SignalR hook (against a fake connection), the theme provider (cookie, OS fallback), the user menu, the profile dialog and photo cropper, every page (login, register, password reset, board list with archive and restore, board view with role-based controls, members dialog), the dialogs, and app routing. Drag and drop is left to the end-to-end suite because jsdom cannot simulate it.
 
 End-to-end tests (Playwright) drive a real Chromium against the whole stack. They start their own isolated SQL Server, Mailpit, API and frontend on separate ports, so they run happily next to your dev setup and never touch your data. The containers are removed automatically when the run ends:
 
@@ -165,7 +165,7 @@ npm run down                                       # remove the e2e containers b
 KEEP_E2E_STACK=1 npm test                          # keep the containers after the run (~15s faster next time)
 ```
 
-58 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates between two browsers, the archive, purge and restore lifecycle (with the 30 days simulated in SQL), and the profile dialog (name, photo upload and removal, dark mode persistence).
+60 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates between two browsers, the archive, purge and restore lifecycle (with the 30 days simulated in SQL), and the profile dialog (name, phone, photo upload and removal, dark mode persistence).
 
 Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (done) → end-to-end regression (done) → CI (done).
 

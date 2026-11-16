@@ -25,6 +25,38 @@ test.describe('profile dialog', () => {
     await expect(page.getByRole('button', { name: 'Account menu' })).toContainText('Grace')
   })
 
+  test('the phone number can be added, shown again after a reload, and cleared', async ({ page }) => {
+    await signUpAndLogin(page, 'Ada')
+    await page.goto('/')
+
+    await openEditProfile(page)
+    await expect(page.getByLabel('Phone (optional)')).toHaveValue('')
+    await page.getByLabel('Phone (optional)').fill('+1 555 123 4567')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+
+    await page.reload()
+    await openEditProfile(page)
+    await expect(page.getByLabel('Phone (optional)')).toHaveValue('+1 555 123 4567')
+    await page.getByLabel('Phone (optional)').fill('')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+
+    await page.reload()
+    await openEditProfile(page)
+    await expect(page.getByLabel('Phone (optional)')).toHaveValue('')
+  })
+
+  test('an invalid phone number is rejected with a message and the dialog stays open', async ({ page }) => {
+    await signUpAndLogin(page, 'Ada')
+    await page.goto('/')
+    await openEditProfile(page)
+    await page.getByLabel('Phone (optional)').fill('not a phone')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByText(/phone/i).last()).toBeVisible()
+  })
+
   test('uploading a photo shows it in the header, it persists, and Remove brings back the initials', async ({ page }) => {
     const user = await signUpAndLogin(page, 'Ada')
     await page.goto('/')

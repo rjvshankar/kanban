@@ -109,9 +109,13 @@ public sealed class AuthController(
 
         if (await users.GetByIdAsync(id, ct) is not { } user) return Unauthorized();
 
-        await users.UpdateNameAsync(id, first, last, ct);
+        // PUT replaces the profile: a blank or missing phone number clears it.
+        var phone = string.IsNullOrWhiteSpace(req.PhoneNumber) ? null : req.PhoneNumber.Trim();
+
+        await users.UpdateProfileAsync(id, first, last, phone, ct);
         user.FirstName = first;
         user.LastName = last;
+        user.PhoneNumber = phone;
         return Ok(ToResponse(user));
     }
 
@@ -121,6 +125,7 @@ public sealed class AuthController(
         email = user.Email,
         firstName = user.FirstName,
         lastName = user.LastName,
+        phoneNumber = user.PhoneNumber,
         avatarVersion = user.AvatarVersion
     };
 }

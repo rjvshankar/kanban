@@ -1,4 +1,4 @@
-// Profile dialog: change first/last name and profile picture, saved with the Save button.
+// Profile dialog: change first/last name, phone number and profile picture, saved with the Save button.
 // (The light/dark switch lives in the user menu.)
 
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
@@ -28,6 +28,7 @@ export default function ProfileDialog({ user, onClose }: Props) {
   const fileInput = useRef<HTMLInputElement>(null)
   const [firstName, setFirstName] = useState(user.firstName)
   const [lastName, setLastName] = useState(user.lastName)
+  const [phone, setPhone] = useState(user.phoneNumber ?? '')
   const [avatar, setAvatar] = useState<AvatarChange>({ kind: 'none' })
   // The picked file while the cropper is showing, else null.
   const [cropping, setCropping] = useState<File | null>(null)
@@ -37,8 +38,8 @@ export default function ProfileDialog({ user, onClose }: Props) {
   // Preview: new picture, forced initials after Remove, or the saved one (undefined).
   const previewSrc = avatar.kind === 'set' ? avatar.previewUrl : avatar.kind === 'remove' ? null : undefined
   const showsPicture = avatar.kind === 'set' || (avatar.kind === 'none' && hasSavedAvatar)
-  const nameChanged = firstName.trim() !== user.firstName || lastName.trim() !== user.lastName
-  const dirty = nameChanged || avatar.kind !== 'none'
+  const detailsChanged = firstName.trim() !== user.firstName || lastName.trim() !== user.lastName || phone.trim() !== (user.phoneNumber ?? '')
+  const dirty = detailsChanged || avatar.kind !== 'none'
 
   function onFilePicked(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -60,9 +61,9 @@ export default function ProfileDialog({ user, onClose }: Props) {
     setSaving(true)
     try {
       // Each step is applied locally as soon as the server accepted it, so a later failure doesn't lose it.
-      if (nameChanged) {
-        const saved = await api.put<User>('/auth/me', { firstName: firstName.trim(), lastName: lastName.trim() })
-        updateUser({ firstName: saved.firstName, lastName: saved.lastName })
+      if (detailsChanged) {
+        const saved = await api.put<User>('/auth/me', { firstName: firstName.trim(), lastName: lastName.trim(), phoneNumber: phone.trim() || null })
+        updateUser({ firstName: saved.firstName, lastName: saved.lastName, phoneNumber: saved.phoneNumber })
       }
       if (avatar.kind === 'set') {
         const body = new FormData()
@@ -86,7 +87,7 @@ export default function ProfileDialog({ user, onClose }: Props) {
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{cropping ? 'Adjust photo' : 'Your profile'}</DialogTitle>
-          <DialogDescription className="sr-only">Edit your name and picture.</DialogDescription>
+          <DialogDescription className="sr-only">Edit your name, phone number and picture.</DialogDescription>
         </DialogHeader>
 
         {cropping ? (
@@ -113,6 +114,11 @@ export default function ProfileDialog({ user, onClose }: Props) {
                 <Label htmlFor="profile-last">Last name</Label>
                 <Input id="profile-last" required maxLength={100} value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="profile-phone">Phone (optional)</Label>
+              <Input id="profile-phone" type="tel" maxLength={30} autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
 
             <div className="grid gap-1.5">

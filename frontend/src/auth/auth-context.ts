@@ -9,6 +9,7 @@ export interface User {
   email: string
   firstName: string
   lastName: string
+  phoneNumber?: string | null
   // Changes when the avatar changes (cache-buster); null/absent = no avatar.
   avatarVersion?: number | null
 }

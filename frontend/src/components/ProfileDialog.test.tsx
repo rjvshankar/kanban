@@ -52,7 +52,7 @@ describe('ProfileDialog', () => {
     let body: unknown
     server.use(http.put(url('/auth/me'), async ({ request }) => {
       body = await request.json()
-      return HttpResponse.json({ ...ada, firstName: 'Grace', lastName: 'Hopper' })
+      return HttpResponse.json({ ...ada, firstName: 'Grace', lastName: 'Hopper', phoneNumber: null })
     }))
     const { user, onClose, updateUser } = mount()
 
@@ -63,9 +63,43 @@ describe('ProfileDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(onClose).toHaveBeenCalled())
-    expect(body).toEqual({ firstName: 'Grace', lastName: 'Hopper' })
-    expect(updateUser).toHaveBeenCalledWith({ firstName: 'Grace', lastName: 'Hopper' })
+    expect(body).toEqual({ firstName: 'Grace', lastName: 'Hopper', phoneNumber: null })
+    expect(updateUser).toHaveBeenCalledWith({ firstName: 'Grace', lastName: 'Hopper', phoneNumber: null })
     expect(toast.success).toHaveBeenCalled()
+  })
+
+  it('shows the current phone number and saves a changed one', async () => {
+    let body: unknown
+    server.use(http.put(url('/auth/me'), async ({ request }) => {
+      body = await request.json()
+      return HttpResponse.json({ ...ada, phoneNumber: '555-9999' })
+    }))
+    const { user, updateUser, onClose } = mount({ ...ada, phoneNumber: '555-1234' })
+    expect(screen.getByLabelText('Phone (optional)')).toHaveValue('555-1234')
+
+    await user.clear(screen.getByLabelText('Phone (optional)'))
+    await user.type(screen.getByLabelText('Phone (optional)'), ' 555-9999 ')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(body).toEqual({ firstName: 'Ada', lastName: 'Lovelace', phoneNumber: '555-9999' })
+    expect(updateUser).toHaveBeenCalledWith({ firstName: 'Ada', lastName: 'Lovelace', phoneNumber: '555-9999' })
+  })
+
+  it('clearing the phone number sends null; the phone field alone makes Save available', async () => {
+    let body: unknown
+    server.use(http.put(url('/auth/me'), async ({ request }) => {
+      body = await request.json()
+      return HttpResponse.json({ ...ada, phoneNumber: null })
+    }))
+    const { user, onClose } = mount({ ...ada, phoneNumber: '555-1234' })
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+
+    await user.clear(screen.getByLabelText('Phone (optional)'))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(body).toMatchObject({ phoneNumber: null })
   })
 
   it('does not allow saving blank names', async () => {

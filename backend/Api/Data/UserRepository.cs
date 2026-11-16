@@ -49,12 +49,12 @@ public sealed class UserRepository(IDbConnectionFactory db) : IUserRepository
             cancellationToken: ct));
     }
 
-    public async Task UpdateNameAsync(int id, string firstName, string lastName, CancellationToken ct = default)
+    public async Task UpdateProfileAsync(int id, string firstName, string lastName, string? phoneNumber, CancellationToken ct = default)
     {
         await using var conn = await db.OpenAsync(ct);
         await conn.ExecuteAsync(new CommandDefinition(
-            "UPDATE dbo.Users SET FirstName = @FirstName, LastName = @LastName WHERE Id = @Id",
-            new { Id = id, FirstName = firstName, LastName = lastName },
+            "UPDATE dbo.Users SET FirstName = @FirstName, LastName = @LastName, PhoneNumber = @PhoneNumber WHERE Id = @Id",
+            new { Id = id, FirstName = firstName, LastName = lastName, PhoneNumber = phoneNumber },
             cancellationToken: ct));
     }
 
