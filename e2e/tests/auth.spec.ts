@@ -86,7 +86,8 @@ test.describe('sessions and protected pages', () => {
   test('logging out ends the session', async ({ page }) => {
     await signUpAndLogin(page)
     await page.goto('/')
-    await page.getByRole('button', { name: /log out/i }).click()
+    await page.getByRole('button', { name: 'Account menu' }).click()
+    await page.getByRole('menuitem', { name: /log out/i }).click()
     await expect(page).toHaveURL('/login')
 
     await page.goto('/')

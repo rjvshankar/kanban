@@ -9,6 +9,9 @@ export interface User {
   email: string
   firstName: string
   lastName: string
+  phoneNumber?: string | null
+  // Changes when the avatar changes (cache-buster); null/absent = no avatar.
+  avatarVersion?: number | null
 }
 
 // Fields submitted by the registration form.
@@ -28,6 +31,8 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>
   register: (input: RegisterInput) => Promise<void>
   logout: () => Promise<void>
+  // Merges changed fields (name, avatarVersion) into the logged-in user after the API accepted them.
+  updateUser: (patch: Partial<User>) => void
 }
 
 // The React context; null until AuthProvider supplies a value.

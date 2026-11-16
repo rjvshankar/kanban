@@ -24,7 +24,8 @@ Mini Trello-style Kanban board.
 Done: JWT auth, boards/columns/cards CRUD, drag and drop (dnd-kit), real-time board updates (SignalR hub `/hubs/board`, "BoardChanged" ping then refetch).
 Also done: board member management (roles owner/editor/viewer; only owners manage columns, board settings and members; editors do cards; viewers read-only), archived-board restore (owners, within 30 days).
 Also done: daily purge job (stored proc `PurgeArchivedBoards` called by `ArchivePurgeService`; boards archived >30 days move to `Deleted*` tables) and restore from the long-term archive (`RestorePurgedBoard`: purged -> archived -> owner restores as usual).
-Also done: full test suite and CI. Backend integration + unit tests (153), frontend tests (133), Playwright e2e (51), and the GitHub Actions workflow `.github/workflows/ci.yml` (see Testing and CI below).
+Also done: user menu under the header avatar (Edit profile, Dark mode switch, Log out; `UserMenu.tsx`) and profile dialog: edit first/last name and optional US phone number (`PUT /api/auth/me`, blank phone clears it; the frontend only accepts 10 digits and auto-formats `(912) 345-6789` via `PhoneInput`/`lib/phone.ts`, on both the profile dialog and the register page; the backend still just validates `[Phone]`, max 30), profile picture (`UserAvatars` table, migration 0005, cropped to 256x256 client-side, `PUT/DELETE /api/auth/me/avatar`, `GET /api/users/{id}/avatar`, `avatarVersion` on the user cache-busts), dark/light switch (per-browser `kanban_theme` cookie, inline script in `index.html` avoids the flash; no server-side preference, add a `UserPreferences` table only if a real need appears).
+Also done: full test suite and CI. Backend integration + unit tests (182), frontend tests (186), Playwright e2e (61), and the GitHub Actions workflow `.github/workflows/ci.yml` (see Testing and CI below).
 Next: nothing scheduled.
 
 ## Later (decided to do later)
