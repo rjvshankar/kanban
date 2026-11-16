@@ -9,4 +9,6 @@ public sealed class User
     public string? PhoneNumber { get; set; }
     public string PasswordHash { get; set; } = "";
     public DateTime CreatedAt { get; set; }
+    /// <summary>Changes whenever the avatar changes (used to bust caches); null when the user has no avatar.</summary>
+    public long? AvatarVersion { get; set; }
 }

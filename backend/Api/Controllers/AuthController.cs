@@ -68,7 +68,7 @@ public sealed class AuthController(
             Path = "/"
         });
 
-        return Ok(new { id = user.Id, email = user.Email, firstName = user.FirstName, lastName = user.LastName });
+        return Ok(ToResponse(user));
     }
 
     [HttpPost("logout")]
@@ -93,6 +93,34 @@ public sealed class AuthController(
         var user = await users.GetByIdAsync(id, ct);
         if (user is null) return Unauthorized();
 
-        return Ok(new { id = user.Id, email = user.Email, firstName = user.FirstName, lastName = user.LastName });
+        return Ok(ToResponse(user));
     }
+
+    [Authorize]
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateMe(UpdateProfileRequest req, CancellationToken ct)
+    {
+        if (!int.TryParse(User.FindFirst("sub")?.Value, out var id)) return Unauthorized();
+
+        var first = req.FirstName.Trim();
+        var last = req.LastName.Trim();
+        if (first.Length == 0 || last.Length == 0)
+            return BadRequest(new { error = "First and last name are required." });
+
+        if (await users.GetByIdAsync(id, ct) is not { } user) return Unauthorized();
+
+        await users.UpdateNameAsync(id, first, last, ct);
+        user.FirstName = first;
+        user.LastName = last;
+        return Ok(ToResponse(user));
+    }
+
+    private static object ToResponse(User user) => new
+    {
+        id = user.Id,
+        email = user.Email,
+        firstName = user.FirstName,
+        lastName = user.LastName,
+        avatarVersion = user.AvatarVersion
+    };
 }

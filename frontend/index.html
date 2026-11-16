@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>frontend</title>
+    <script>
+      // Sets the theme before first paint (no flash): saved cookie choice, else the OS setting.
+      // Keep in sync with src/theme/theme.ts.
+      (function () {
+        var m = document.cookie.match(/(?:^|; )kanban_theme=(light|dark)(?:;|$)/);
+        var dark = m ? m[1] === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

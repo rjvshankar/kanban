@@ -4,6 +4,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from './auth/AuthProvider'
+import { ThemeProvider } from './theme/ThemeProvider'
 import { GuestRoute, ProtectedRoute } from './auth/ProtectedRoute'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import BoardListPage from './pages/BoardListPage'
@@ -15,6 +16,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 // Renders the router, the auth provider and the route table.
 export default function App() {
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <AuthProvider>
         <Routes>
@@ -36,5 +38,6 @@ export default function App() {
         <Toaster position="bottom-right" />
       </AuthProvider>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }

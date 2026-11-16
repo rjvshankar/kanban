@@ -147,4 +147,30 @@ public sealed class AuthControllerTests
         controller.Logout().ShouldBeOfType<NoContentResult>();
         controller.Response.Headers.SetCookie.ToString().ShouldContain("kanban_auth=;");
     }
+
+    [Fact]
+    public async Task UpdateMe_trims_names_and_saves()
+    {
+        _users.GetByIdAsync(7, Arg.Any<CancellationToken>()).Returns(new User { Id = 7, FirstName = "Ada", LastName = "L", Email = "ada@example.com" });
+
+        var result = await Controller(userId: 7).UpdateMe(new UpdateProfileRequest("  Grace ", " Hopper  "), Ct);
+
+        result.Status().ShouldBe(200);
+        await _users.Received(1).UpdateNameAsync(7, "Grace", "Hopper", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateMe_blank_names_are_rejected_and_nothing_saved()
+    {
+        var result = await Controller(userId: 7).UpdateMe(new UpdateProfileRequest("   ", "Hopper"), Ct);
+
+        result.ShouldBeOfType<BadRequestObjectResult>();
+        await _users.DidNotReceiveWithAnyArgs().UpdateNameAsync(0, "", "", TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task UpdateMe_without_user_id_is_unauthorized()
+    {
+        (await Controller().UpdateMe(new UpdateProfileRequest("A", "B"), Ct)).ShouldBeOfType<UnauthorizedResult>();
+    }
 }
