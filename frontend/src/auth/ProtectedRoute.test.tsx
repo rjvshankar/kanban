@@ -7,7 +7,7 @@ import { GuestRoute, ProtectedRoute } from './ProtectedRoute'
 
 function mount(route: string | { pathname: string; state?: unknown }, user: User | null, loading = false) {
   return render(
-    <AuthContext.Provider value={{ user, loading, login: async () => {}, register: async () => {}, logout: async () => {} }}>
+    <AuthContext.Provider value={{ user, loading, login: async () => {}, register: async () => {}, logout: async () => {}, updateUser: () => {} }}>
       <MemoryRouter initialEntries={[route]}>
         <Routes>
           <Route element={<GuestRoute />}><Route path="/login" element={<p>login page</p>} /></Route>

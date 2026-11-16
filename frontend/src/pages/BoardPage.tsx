@@ -27,6 +27,7 @@ import { arrayMove, SortableContext, horizontalListSortingStrategy, sortableKeyb
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowLeft, Pencil, Plus, Users } from 'lucide-react'
 import { Link, useParams } from 'react-router'
+import ProfileButton from '@/components/ProfileButton'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -323,6 +324,7 @@ export default function BoardPage() {
             <Button variant="outline" size="sm" onClick={() => setDialog({ kind: 'members' })}><Users /> Members</Button>
           )}
           <span className="text-xs capitalize text-muted-foreground">{board.role}</span>
+          <ProfileButton showName={false} />
         </div>
       </header>
 

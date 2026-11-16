@@ -22,12 +22,14 @@ export function setUnauthorizedHandler(fn: (() => void) | null) {
 
 // Core request function: sends JSON plus the auth cookie, parses the reply, and throws ApiError on failure.
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  // FormData is sent as-is (the browser sets the multipart Content-Type and boundary); anything else as JSON.
+  const isForm = body instanceof FormData
   // The raw HTTP response.
   const res = await fetch(`/api${path}`, {
     method,
     credentials: 'same-origin', // sends the httpOnly auth cookie
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: body === undefined || isForm ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
   })
 
   // No Content: nothing to parse.
@@ -60,6 +62,7 @@ function extractMessage(data: unknown, status: number): string {
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
+  put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
 }

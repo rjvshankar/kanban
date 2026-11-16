@@ -40,7 +40,7 @@ interface Options {
 export function renderWithProviders(ui: ReactElement, { route = '/', path = '*', user = ada, auth }: Options = {}) {
   const value: AuthContextValue = {
     user, loading: false,
-    login: async () => {}, register: async () => {}, logout: async () => {},
+    login: async () => {}, register: async () => {}, logout: async () => {}, updateUser: () => {},
     ...auth,
   }
   const result = render(

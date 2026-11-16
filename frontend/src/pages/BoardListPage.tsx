@@ -5,6 +5,7 @@ import { LogOut, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import ProfileButton from '@/components/ProfileButton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { api } from '../api/client'
@@ -13,8 +14,8 @@ import { useAuth } from '../auth/auth-context'
 
 // Board list screen.
 export default function BoardListPage() {
-  // Current user (for the greeting) and the logout action.
-  const { user, logout } = useAuth()
+  // The logout action (the greeting and profile live in ProfileButton).
+  const { logout } = useAuth()
   // The board list; null until the first load finishes.
   const [boards, setBoards] = useState<BoardSummary[] | null>(null)
   // Bumping this re-runs the load effect, which is how we refetch.
@@ -102,7 +103,7 @@ export default function BoardListPage() {
       <header className="flex items-center justify-between border-b bg-background px-4 py-3">
         <span className="font-semibold">Kanban</span>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {user?.firstName}
+          <ProfileButton />
           <Button variant="ghost" size="sm" onClick={() => void logout()}><LogOut /> Log out</Button>
         </div>
       </header>
