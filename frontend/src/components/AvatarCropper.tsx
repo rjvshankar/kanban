@@ -20,15 +20,26 @@ export default function AvatarCropper({ file, onCancel, onDone, onError }: Props
   // Last pointer position while dragging, else null.
   const drag = useRef<{ x: number; y: number } | null>(null)
 
+  // Always call the latest onError without making the decode effect re-run when the parent re-renders.
+  const onErrorRef = useRef(onError)
+  useEffect(() => {
+    onErrorRef.current = onError
+  })
+
   // Decode the file into an <img>.
   useEffect(() => {
+    // Set by cleanup: a superseded run (e.g. React StrictMode's double effect) must not report its revoked URL as an error.
+    let stale = false
     const objectUrl = URL.createObjectURL(file)
     const image = new Image()
-    image.onload = () => setImg(image)
-    image.onerror = () => onError('Could not read that image.')
+    image.onload = () => !stale && setImg(image)
+    image.onerror = () => !stale && onErrorRef.current('Could not read that image.')
     image.src = objectUrl
-    return () => URL.revokeObjectURL(objectUrl)
-  }, [file, onError])
+    return () => {
+      stale = true
+      URL.revokeObjectURL(objectUrl)
+    }
+  }, [file])
 
   // Repaint the preview whenever the crop changes.
   useEffect(() => {
