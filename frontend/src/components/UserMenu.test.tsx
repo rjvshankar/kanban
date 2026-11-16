@@ -37,6 +37,13 @@ describe('UserMenu', () => {
     expect(screen.getByLabelText('First name')).toHaveValue('Ada')
   })
 
+  it('does not hand focus back to the menu button when it closes to open the dialog', async () => {
+    const { user } = await open()
+    await user.click(screen.getByRole('menuitem', { name: /edit profile/i }))
+    await screen.findByRole('heading', { name: 'Your profile' })
+    expect(screen.getByRole('button', { name: 'Account menu', hidden: true })).not.toHaveFocus()
+  })
+
   it('Dark mode toggles the theme and saves the cookie, and keeps the menu open', async () => {
     const { user } = await open()
     const toggle = screen.getByRole('menuitemcheckbox', { name: 'Dark mode' })

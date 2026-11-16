@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '../auth/auth-context'
-import { Field, FormCard, FormError } from './Form'
+import { Field, FormCard, FormError, PhoneField } from './Form'
 
 // Registration screen.
 export default function RegisterPage() {
@@ -46,7 +46,7 @@ export default function RegisterPage() {
           <Field label="Last name" required maxLength={100} autoComplete="family-name" value={form.lastName} onChange={set('lastName')} />
         </div>
         <Field label="Email" type="email" required autoComplete="email" value={form.email} onChange={set('email')} />
-        <Field label="Phone (optional)" type="tel" maxLength={30} autoComplete="tel" value={form.phoneNumber} onChange={set('phoneNumber')} />
+        <PhoneField label="Phone (optional)" value={form.phoneNumber} onValueChange={(v) => setForm((f) => ({ ...f, phoneNumber: v }))} />
         <Field label="Password (min 8 characters)" type="password" required minLength={8} maxLength={128} autoComplete="new-password" value={form.password} onChange={set('password')} />
         <FormError message={error} />
         <Button type="submit" disabled={busy}>{busy ? 'Creating...' : 'Create account'}</Button>

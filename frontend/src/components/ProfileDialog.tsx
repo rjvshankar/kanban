@@ -7,9 +7,11 @@ import AvatarCropper from '@/components/AvatarCropper'
 import UserAvatar from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import PhoneInput from '@/components/PhoneInput'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '../api/client'
+import { normalizePhone } from '../lib/phone'
 import { useAuth, type User } from '../auth/auth-context'
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024 // source photos can be big; the cropped result is tiny
@@ -25,10 +27,12 @@ interface Props {
 // The parent renders it only while open, so state resets each time.
 export default function ProfileDialog({ user, onClose }: Props) {
   const { updateUser } = useAuth()
+  // Stored numbers are shown in the (912) 345-6789 layout whatever format they were saved in.
+  const initialPhone = normalizePhone(user.phoneNumber ?? '')
   const fileInput = useRef<HTMLInputElement>(null)
   const [firstName, setFirstName] = useState(user.firstName)
   const [lastName, setLastName] = useState(user.lastName)
-  const [phone, setPhone] = useState(user.phoneNumber ?? '')
+  const [phone, setPhone] = useState(initialPhone)
   const [avatar, setAvatar] = useState<AvatarChange>({ kind: 'none' })
   // The picked file while the cropper is showing, else null.
   const [cropping, setCropping] = useState<File | null>(null)
@@ -38,7 +42,7 @@ export default function ProfileDialog({ user, onClose }: Props) {
   // Preview: new picture, forced initials after Remove, or the saved one (undefined).
   const previewSrc = avatar.kind === 'set' ? avatar.previewUrl : avatar.kind === 'remove' ? null : undefined
   const showsPicture = avatar.kind === 'set' || (avatar.kind === 'none' && hasSavedAvatar)
-  const detailsChanged = firstName.trim() !== user.firstName || lastName.trim() !== user.lastName || phone.trim() !== (user.phoneNumber ?? '')
+  const detailsChanged = firstName.trim() !== user.firstName || lastName.trim() !== user.lastName || phone !== initialPhone
   const dirty = detailsChanged || avatar.kind !== 'none'
 
   function onFilePicked(e: ChangeEvent<HTMLInputElement>) {
@@ -62,7 +66,7 @@ export default function ProfileDialog({ user, onClose }: Props) {
     try {
       // Each step is applied locally as soon as the server accepted it, so a later failure doesn't lose it.
       if (detailsChanged) {
-        const saved = await api.put<User>('/auth/me', { firstName: firstName.trim(), lastName: lastName.trim(), phoneNumber: phone.trim() || null })
+        const saved = await api.put<User>('/auth/me', { firstName: firstName.trim(), lastName: lastName.trim(), phoneNumber: phone || null })
         updateUser({ firstName: saved.firstName, lastName: saved.lastName, phoneNumber: saved.phoneNumber })
       }
       if (avatar.kind === 'set') {
@@ -118,7 +122,7 @@ export default function ProfileDialog({ user, onClose }: Props) {
 
             <div className="grid gap-1.5">
               <Label htmlFor="profile-phone">Phone (optional)</Label>
-              <Input id="profile-phone" type="tel" maxLength={30} autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <PhoneInput id="profile-phone" value={phone} onValueChange={setPhone} />
             </div>
 
             <div className="grid gap-1.5">

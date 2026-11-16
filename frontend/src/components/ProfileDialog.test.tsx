@@ -72,18 +72,18 @@ describe('ProfileDialog', () => {
     let body: unknown
     server.use(http.put(url('/auth/me'), async ({ request }) => {
       body = await request.json()
-      return HttpResponse.json({ ...ada, phoneNumber: '555-9999' })
+      return HttpResponse.json({ ...ada, phoneNumber: '(555) 999-9999' })
     }))
-    const { user, updateUser, onClose } = mount({ ...ada, phoneNumber: '555-1234' })
-    expect(screen.getByLabelText('Phone (optional)')).toHaveValue('555-1234')
+    const { user, updateUser, onClose } = mount({ ...ada, phoneNumber: '(555) 123-4567' })
+    expect(screen.getByLabelText('Phone (optional)')).toHaveValue('(555) 123-4567')
 
     await user.clear(screen.getByLabelText('Phone (optional)'))
-    await user.type(screen.getByLabelText('Phone (optional)'), ' 555-9999 ')
+    await user.type(screen.getByLabelText('Phone (optional)'), '5559999999')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(onClose).toHaveBeenCalled())
-    expect(body).toEqual({ firstName: 'Ada', lastName: 'Lovelace', phoneNumber: '555-9999' })
-    expect(updateUser).toHaveBeenCalledWith({ firstName: 'Ada', lastName: 'Lovelace', phoneNumber: '555-9999' })
+    expect(body).toEqual({ firstName: 'Ada', lastName: 'Lovelace', phoneNumber: '(555) 999-9999' })
+    expect(updateUser).toHaveBeenCalledWith({ firstName: 'Ada', lastName: 'Lovelace', phoneNumber: '(555) 999-9999' })
   })
 
   it('clearing the phone number sends null; the phone field alone makes Save available', async () => {
@@ -92,7 +92,7 @@ describe('ProfileDialog', () => {
       body = await request.json()
       return HttpResponse.json({ ...ada, phoneNumber: null })
     }))
-    const { user, onClose } = mount({ ...ada, phoneNumber: '555-1234' })
+    const { user, onClose } = mount({ ...ada, phoneNumber: '(555) 123-4567' })
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
 
     await user.clear(screen.getByLabelText('Phone (optional)'))
@@ -100,6 +100,27 @@ describe('ProfileDialog', () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(body).toMatchObject({ phoneNumber: null })
+  })
+
+  it('shows the placeholder when empty and reformats an older stored number', () => {
+    mount({ ...ada, phoneNumber: '+1 555 123 4567' })
+    expect(screen.getByLabelText('Phone (optional)')).toHaveValue('(555) 123-4567')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled() // same number, only the layout differs
+  })
+
+  it('shows the format hint when there is no phone number yet', () => {
+    mount()
+    expect(screen.getByLabelText('Phone (optional)')).toHaveAttribute('placeholder', '(xxx) xxx-xxxx')
+  })
+
+  it('formats as digits are typed and does not save a partial number', async () => {
+    const { user, onClose } = mount()
+    const phone = screen.getByLabelText('Phone (optional)')
+    await user.type(phone, '55512')
+    expect(phone).toHaveValue('(555) 12')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(phone).toBeInvalid()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('does not allow saving blank names', async () => {

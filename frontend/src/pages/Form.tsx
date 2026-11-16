@@ -2,6 +2,7 @@
 
 import { useId, type ComponentProps, type ReactNode } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import PhoneInput from '@/components/PhoneInput'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -29,6 +30,17 @@ export function Field(props: ComponentProps<typeof Input> & { label: string }) {
     <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
       <Input id={id} {...input} />
+    </div>
+  )
+}
+
+// A labeled phone input that formats itself as (912) 345-6789.
+export function PhoneField({ label, ...input }: ComponentProps<typeof PhoneInput> & { label: string }) {
+  const id = useId()
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <PhoneInput id={id} {...input} />
     </div>
   )
 }

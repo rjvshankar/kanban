@@ -1,6 +1,6 @@
 // Header menu under the user's avatar and first name (same on every page so it never moves): Edit profile (opens the profile dialog), the dark mode switch and Log out.
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { LogOut, UserPen } from 'lucide-react'
 import ProfileDialog from '@/components/ProfileDialog'
 import UserAvatar from '@/components/UserAvatar'
@@ -17,6 +17,9 @@ export default function UserMenu() {
   const { theme, setTheme } = useTheme()
   // Whether the profile dialog is open (rendered only while open so its form state resets each time).
   const [editing, setEditing] = useState(false)
+  // True while the menu is closing to open the dialog: the menu must not hand focus back to its button then,
+  // or the dialog's focus trap steals focus back mid-typing and selects the field's text.
+  const openingDialog = useRef(false)
   if (!user) return null
 
   const dark = theme === 'dark'
@@ -31,13 +34,25 @@ export default function UserMenu() {
           <UserAvatar user={user} />
           {user.firstName}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent
+          align="end"
+          className="w-56"
+          onCloseAutoFocus={(e) => {
+            if (openingDialog.current) {
+              e.preventDefault()
+              openingDialog.current = false
+            }
+          }}
+        >
           <DropdownMenuLabel className="font-normal">
             <div className="truncate text-sm font-medium text-foreground">{user.firstName} {user.lastName}</div>
             <div className="truncate text-xs text-muted-foreground">{user.email}</div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setEditing(true)}><UserPen /> Edit profile</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => {
+            openingDialog.current = true
+            setEditing(true)
+          }}><UserPen /> Edit profile</DropdownMenuItem>
           {/* A checkbox item so it is announced as a toggle; preventDefault keeps the menu open so the change is visible. */}
           <DropdownMenuCheckboxItem
             checked={dark}
