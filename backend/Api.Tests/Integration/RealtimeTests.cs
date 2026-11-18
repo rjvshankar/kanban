@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using Api.Dtos;
 using Api.Hubs;
+using Api.Services;
 using Api.Tests.Infrastructure;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.SignalR;
@@ -75,5 +76,109 @@ public sealed class RealtimeTests(ApiFixture fixture) : IntegrationTest(fixture)
         await using var _ = connection;
 
         await Should.ThrowAsync<HttpRequestException>(() => connection.StartAsync());
+    }
+
+    // Connects and records every PresenceChanged list it receives.
+    private async Task<(HubConnection Connection, Func<Func<IReadOnlyList<PresenceViewer>, bool>, Task> Expect)> ConnectWithPresenceAsync(TestUser user)
+    {
+        var latest = new List<PresenceViewer>();
+        var gate = new object();
+        var connection = new HubConnectionBuilder()
+            .WithUrl(new Uri(Factory.Server.BaseAddress, "hubs/board"), o =>
+            {
+                o.Transports = HttpTransportType.LongPolling;
+                o.HttpMessageHandlerFactory = _ => Factory.Server.CreateHandler();
+                o.Headers["Cookie"] = user.Cookie;
+            })
+            .Build();
+        connection.On<List<PresenceViewer>>(BoardHub.PresenceEvent, list => { lock (gate) { latest = list; } });
+        await connection.StartAsync(TestContext.Current.CancellationToken);
+        return (connection, async predicate =>
+        {
+            var deadline = DateTime.UtcNow + Timeout;
+            while (DateTime.UtcNow < deadline)
+            {
+                lock (gate) { if (predicate(latest)) return; }
+                await Task.Delay(25, TestContext.Current.CancellationToken);
+            }
+            throw new ShouldAssertException("expected presence list never arrived");
+        });
+    }
+
+    [Fact]
+    public async Task Joining_returns_who_is_already_viewing_including_yourself()
+    {
+        var owner = await NewUserAsync();
+        var editor = await NewUserAsync();
+        var board = await CreateBoardAsync(owner);
+        await AddMemberAsync(owner, board, editor, "editor");
+
+        var (a, _) = await ConnectWithPresenceAsync(owner);
+        await using var _a = a;
+        var first = await a.InvokeAsync<List<PresenceViewer>>("JoinBoard", board, TestContext.Current.CancellationToken);
+        first.Select(v => v.Id).ShouldBe([owner.Id]);
+
+        var (b, _) = await ConnectWithPresenceAsync(editor);
+        await using var _b = b;
+        var second = await b.InvokeAsync<List<PresenceViewer>>("JoinBoard", board, TestContext.Current.CancellationToken);
+        second.Select(v => v.Id).ShouldBe([owner.Id, editor.Id], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task Viewers_are_pushed_when_someone_joins_and_when_they_disconnect()
+    {
+        var owner = await NewUserAsync();
+        var editor = await NewUserAsync();
+        var board = await CreateBoardAsync(owner);
+        await AddMemberAsync(owner, board, editor, "editor");
+
+        var (a, aExpect) = await ConnectWithPresenceAsync(owner);
+        await using var _a = a;
+        await a.InvokeAsync<List<PresenceViewer>>("JoinBoard", board, TestContext.Current.CancellationToken);
+
+        var (b, _) = await ConnectWithPresenceAsync(editor);
+        await b.InvokeAsync<List<PresenceViewer>>("JoinBoard", board, TestContext.Current.CancellationToken);
+        await aExpect(l => l.Count == 2);
+
+        await b.DisposeAsync(); // closing the tab never calls LeaveBoard
+        await aExpect(l => l.Count == 1 && l[0].Id == owner.Id);
+    }
+
+    [Fact]
+    public async Task Non_member_does_not_appear_as_a_viewer()
+    {
+        var owner = await NewUserAsync();
+        var stranger = await NewUserAsync();
+        var board = await CreateBoardAsync(owner);
+
+        var (s, _) = await ConnectWithPresenceAsync(stranger);
+        await using var _s = s;
+        await Should.ThrowAsync<HubException>(() => s.InvokeAsync<List<PresenceViewer>>("JoinBoard", board, TestContext.Current.CancellationToken));
+
+        var (o, _) = await ConnectWithPresenceAsync(owner);
+        await using var _o = o;
+        var list = await o.InvokeAsync<List<PresenceViewer>>("JoinBoard", board, TestContext.Current.CancellationToken);
+        list.Select(v => v.Id).ShouldBe([owner.Id]);
+    }
+
+    [Fact]
+    public async Task Leaving_the_board_removes_you_from_the_viewers()
+    {
+        var owner = await NewUserAsync();
+        var editor = await NewUserAsync();
+        var board = await CreateBoardAsync(owner);
+        await AddMemberAsync(owner, board, editor, "editor");
+
+        var (a, aExpect) = await ConnectWithPresenceAsync(owner);
+        await using var _a = a;
+        await a.InvokeAsync<List<PresenceViewer>>("JoinBoard", board, TestContext.Current.CancellationToken);
+        var (b, _) = await ConnectWithPresenceAsync(editor);
+        await using var _b = b;
+        await b.InvokeAsync<List<PresenceViewer>>("JoinBoard", board, TestContext.Current.CancellationToken);
+        await aExpect(l => l.Count == 2);
+
+        await b.InvokeAsync("LeaveBoard", board, TestContext.Current.CancellationToken);
+
+        await aExpect(l => l.Count == 1);
     }
 }

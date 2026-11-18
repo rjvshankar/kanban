@@ -24,6 +24,7 @@ A mini Trello-style Kanban board built with ASP.NET Core, SQL Server and React.
 - **Columns and cards:** add, rename, edit and delete. Cards have a title, description and due date.
 - **Drag and drop:** reorder cards and columns, and move cards between columns (mouse, touch and keyboard).
 - **Real-time updates:** changes show up instantly in every tab viewing the same board.
+- **Presence:** avatars in the board header show who has the board open right now (you included, a second tab of the same person counts once).
 - **Soft delete:** deleting a board, column or card hides it rather than removing the row. Boards archived for more than 30 days are moved out of the live tables by the daily purge job (see Long-term archive).
 
 ## Tech stack
@@ -119,7 +120,7 @@ All endpoints except the auth ones require login. `Api/Api.http` has ready-made 
 | Long-term archive | `GET /api/boards/purged` (boards you owned when purged); `POST /api/boards/{id}/restore-purged` (moves it back to archived) |
 | Columns | `POST /api/boards/{id}/columns`; `PATCH/DELETE /api/columns/{id}`; `POST /api/columns/{id}/move` |
 | Cards | `POST /api/columns/{id}/cards`; `PATCH/DELETE /api/cards/{id}`; `POST /api/cards/{id}/move` |
-| Real-time | SignalR hub at `/hubs/board` (`JoinBoard`; server pushes `BoardChanged`) |
+| Real-time | SignalR hub at `/hubs/board` (`JoinBoard` returns the current viewers; server pushes `BoardChanged` and `PresenceChanged`) |
 
 Design notes:
 
@@ -129,6 +130,7 @@ Design notes:
 - **Archive:** restore is a single atomic update that succeeds only for an owner of an archived board still inside the 30-day window (`ArchivePolicy.RetentionDays`); everything else returns 404.
 - **Purge:** the logic is in SQL (`dbo.PurgeArchivedBoards`, batched, one transaction per batch). `ArchivePurgeService` only schedules it: once at startup, then every 24 hours. `dbo.RestorePurgedBoard` reverses it for former owners, keeping original ids.
 - **Real-time:** after every change the server pings the board's SignalR group and open pages refetch the board. The server stays the source of truth.
+- **Presence:** `PresenceTracker` (in-memory singleton) counts connections per user per board; a user leaves the list when their last connection closes (`OnDisconnectedAsync`, so closed tabs are covered). Every change pushes the full viewer list, not a delta. Single API instance only; a Redis backplane would be needed to scale out.
 
 ## Testing
 
@@ -138,7 +140,7 @@ Backend integration tests live in `backend/Api.Tests` (xUnit v3, Shouldly, Testc
 cd backend/Api.Tests && dotnet run      # or: cd backend && dotnet test
 ```
 
-182 tests in two groups:
+194 tests in two groups:
 
 - **Integration** (`Integration/`, real API + SQL Server): registration and login, password reset (including rate limiting), profile name and avatar upload rules, boards, the owner/editor/viewer permission matrix, member management, cards, card and column ordering (including position renumbering), archive, purge and restore, and SignalR board pings.
 - **Unit** (`Unit/`, no Docker needed, repositories mocked): role rules, claim parsing, JWT creation and validation, the SignalR notifier, the purge background service, and the auth, password reset, boards, columns and cards controllers.
@@ -151,7 +153,7 @@ npm run test:watch                   # watch mode
 npm run test:coverage                # coverage report
 ```
 
-186 tests cover the API client (errors, 401 handling), the auth provider and route guards, the SignalR hook (against a fake connection), the theme provider (cookie, OS fallback), the user menu, the profile dialog and photo cropper, every page (login, register, password reset, board list with archive and restore, board view with role-based controls, members dialog), the dialogs, and app routing. Drag and drop is left to the end-to-end suite because jsdom cannot simulate it.
+194 tests cover the API client (errors, 401 handling), the auth provider and route guards, the SignalR hook (against a fake connection), the theme provider (cookie, OS fallback), the user menu, the profile dialog and photo cropper, every page (login, register, password reset, board list with archive and restore, board view with role-based controls, members dialog), the dialogs, and app routing. Drag and drop is left to the end-to-end suite because jsdom cannot simulate it.
 
 End-to-end tests (Playwright) drive a real Chromium against the whole stack. They start their own isolated SQL Server, Mailpit, API and frontend on separate ports, so they run happily next to your dev setup and never touch your data. The containers are removed automatically when the run ends:
 
@@ -165,7 +167,7 @@ npm run down                                       # remove the e2e containers b
 KEEP_E2E_STACK=1 npm test                          # keep the containers after the run (~15s faster next time)
 ```
 
-61 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates between two browsers, the archive, purge and restore lifecycle (with the 30 days simulated in SQL), and the profile dialog (name, phone, photo upload and removal, dark mode persistence).
+63 tests cover registration, login and sessions, password reset (the email is read from Mailpit), boards, columns and cards, drag and drop with real mouse events (within a column, across columns, into empty columns, column reordering), what owners, editors and viewers can see and do (and that the server enforces it when the UI is bypassed), member management, live updates and presence between two browsers, the archive, purge and restore lifecycle (with the 30 days simulated in SQL), and the profile dialog (name, phone, photo upload and removal, dark mode persistence).
 
 Test plan, in order: backend integration (done) → backend unit tests (done) → frontend (done) → end-to-end regression (done) → CI (done).
 
@@ -226,6 +228,7 @@ Done:
 - [x] Drag-and-drop for cards and columns (dnd-kit)
 - [x] Minimal UI restyle (Tailwind CSS + shadcn/ui)
 - [x] Real-time board updates across tabs (SignalR)
+- [x] Presence indicators (who is viewing the board)
 - [x] Board member management with owner/editor/viewer roles
 - [x] Archived-board restore (30-day window)
 - [x] Daily purge job and long-term archive with restore
@@ -239,7 +242,6 @@ Done:
 Later:
 
 - [ ] Live updates on the board list page
-- [ ] Presence indicators (who is viewing the board)
 - [ ] Live cursors
 - [ ] Granular SignalR events (patch state in place instead of refetching), if refetching ever feels slow
 

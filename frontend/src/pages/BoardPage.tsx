@@ -28,6 +28,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowLeft, Pencil, Plus, Users } from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import UserMenu from '@/components/UserMenu'
+import PresenceAvatars from '@/components/PresenceAvatars'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -133,7 +134,7 @@ export default function BoardPage() {
   const pendingReloadRef = useRef(false)
 
   // Live updates: when someone else changes this board, refetch it (or queue that until the drag ends).
-  useBoardRealtime(Number(id), () => {
+  const viewers = useBoardRealtime(Number(id), () => {
     if (dragLockRef.current) pendingReloadRef.current = true
     else reload()
   })
@@ -323,6 +324,7 @@ export default function BoardPage() {
           {isOwner && (
             <Button variant="outline" size="sm" onClick={() => setDialog({ kind: 'members' })}><Users /> Members</Button>
           )}
+          <PresenceAvatars viewers={viewers} />
           <span className="text-xs capitalize text-muted-foreground">{board.role}</span>
           <UserMenu />
         </div>

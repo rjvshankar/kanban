@@ -1,9 +1,9 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // A fake SignalR connection we can drive by hand.
 const conn = vi.hoisted(() => {
-  const handlers: Record<string, () => void> = {}
+  const handlers: Record<string, (...args: never[]) => void> = {}
   let reconnected: () => void = () => {}
   return {
     handlers,
@@ -11,7 +11,7 @@ const conn = vi.hoisted(() => {
     start: vi.fn(),
     stop: vi.fn(),
     invoke: vi.fn(),
-    on: vi.fn((name: string, fn: () => void) => { handlers[name] = fn }),
+    on: vi.fn((name: string, fn: (...args: never[]) => void) => { handlers[name] = fn }),
     onreconnected: vi.fn((fn: () => void) => { reconnected = fn }),
     withUrl: vi.fn(),
     withAutomaticReconnect: vi.fn(),
@@ -79,6 +79,43 @@ describe('useBoardRealtime', () => {
 
     await waitFor(() => expect(conn.invoke).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(onChange).toHaveBeenCalledTimes(2))
+  })
+
+  it('returns the viewers from joining, then replaces them on every PresenceChanged', async () => {
+    const ada = { id: 1, firstName: 'Ada', lastName: 'Lovelace' }
+    const bob = { id: 2, firstName: 'Bob', lastName: 'Builder', avatarVersion: 3 }
+    conn.invoke.mockResolvedValue([ada])
+    const { result } = renderHook(() => useBoardRealtime(5, vi.fn()))
+    await waitFor(() => expect(result.current).toEqual([ada]))
+
+    act(() => conn.handlers.PresenceChanged([ada, bob] as never))
+    expect(result.current).toEqual([ada, bob])
+
+    act(() => conn.handlers.PresenceChanged([bob] as never))
+    expect(result.current).toEqual([bob])
+  })
+
+  it('refreshes the viewers after an automatic reconnect', async () => {
+    const ada = { id: 1, firstName: 'Ada', lastName: 'Lovelace' }
+    const bob = { id: 2, firstName: 'Bob', lastName: 'Builder' }
+    conn.invoke.mockResolvedValueOnce([ada]).mockResolvedValueOnce([ada, bob])
+    const { result } = renderHook(() => useBoardRealtime(5, vi.fn()))
+    await waitFor(() => expect(result.current).toEqual([ada]))
+
+    conn.fireReconnected()
+
+    await waitFor(() => expect(result.current).toEqual([ada, bob]))
+  })
+
+  it('clears the viewers when switching boards', async () => {
+    const ada = { id: 1, firstName: 'Ada', lastName: 'Lovelace' }
+    conn.invoke.mockResolvedValueOnce([ada]).mockReturnValueOnce(new Promise(() => {}))
+    const { result, rerender } = renderHook(({ id }) => useBoardRealtime(id, vi.fn()), { initialProps: { id: 5 } })
+    await waitFor(() => expect(result.current).toEqual([ada]))
+
+    rerender({ id: 6 })
+
+    await waitFor(() => expect(result.current).toEqual([]))
   })
 
   it('stops the connection on unmount', async () => {

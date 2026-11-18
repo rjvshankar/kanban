@@ -95,4 +95,34 @@ test.describe('live updates between two people on the same board', () => {
     await expect(page.getByText('Board not found.')).toBeVisible()
     await ctx.close()
   })
+
+  test('presence: each person sees who else is viewing, and it updates when they leave', async ({ page, browser }) => {
+    const { otherPage, ctx } = await twoPeople(browser, page, 'viewer')
+    const viewers = (p: Page) => p.getByRole('list', { name: 'People viewing this board' }).getByRole('listitem')
+
+    await expect(viewers(page)).toHaveCount(2)
+    await expect(viewers(otherPage)).toHaveCount(2)
+    await expect(viewers(page).first()).toHaveAttribute('aria-label', /\(you\)$/)
+    await expect(viewers(otherPage).first()).toHaveAttribute('aria-label', /\(you\)$/)
+
+    await otherPage.close() // closing the tab, not leaving politely
+
+    await expect(viewers(page)).toHaveCount(1)
+    await ctx.close()
+  })
+
+  test('presence: a second tab of the same person is not a second avatar', async ({ page, browser }) => {
+    const { boardId, ctx } = await twoPeople(browser, page, 'viewer')
+    const viewers = page.getByRole('list', { name: 'People viewing this board' }).getByRole('listitem')
+    await expect(viewers).toHaveCount(2)
+
+    const secondTab = await page.context().newPage()
+    await gotoBoardLive(secondTab, boardId)
+    await expect(secondTab.getByRole('heading', { name: 'Live' })).toBeVisible()
+    await expect(viewers).toHaveCount(2)
+
+    await secondTab.close()
+    await expect(viewers).toHaveCount(2)
+    await ctx.close()
+  })
 })
