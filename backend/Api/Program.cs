@@ -29,6 +29,7 @@ builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IBoardNotifier, BoardNotifier>();
+builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddHostedService<ArchivePurgeService>();
 
 builder.Services.AddOptions<JwtOptions>()

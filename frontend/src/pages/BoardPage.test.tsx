@@ -35,7 +35,21 @@ function serve(role: Role = 'owner', overrides: Partial<Board> = {}) {
 
 const mount = () => renderWithProviders(<BoardPage />, { route: '/boards/5', path: '/boards/:id' })
 
-beforeEach(() => vi.mocked(useBoardRealtime).mockReset())
+beforeEach(() => vi.mocked(useBoardRealtime).mockReset().mockReturnValue([]))
+
+describe('BoardPage: presence', () => {
+  it('shows the avatars of the people viewing the board in the header', async () => {
+    serve()
+    vi.mocked(useBoardRealtime).mockReturnValue([
+      { id: 1, firstName: 'Ada', lastName: 'Lovelace' },
+      { id: 2, firstName: 'Bob', lastName: 'Builder' },
+    ])
+    mount()
+    await screen.findByText('Roadmap')
+    expect(screen.getByLabelText('Ada Lovelace (you)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Bob Builder')).toBeInTheDocument()
+  })
+})
 
 describe('BoardPage: loading', () => {
   it('shows loading, then the board with its columns, cards, counts and due dates', async () => {
